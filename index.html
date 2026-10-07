@@ -15,7 +15,7 @@ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bott
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans)}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center;padding:10px 14px;flex-wrap:wrap}
 header h1{font:600 17px var(--ser);margin:0 6px 0 0;white-space:nowrap}
-button,select,input{font:inherit;color:inherit}
+button,select,input,textarea{font:inherit;color:inherit}
 .btn{background:none;border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer}
 .btn:hover{border-color:var(--acc)}
 #q{flex:1 1 200px;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 11px}
@@ -133,8 +133,10 @@ else if(a==="save"){const s={...S.edit,title:$("#st").value.trim(),author:$("#sa
 if(!s.title||!s.text.trim()){$("#sm").textContent="Vyplň název a text.";return}
 if(!s.id)s.id=Date.now().toString(36);if(API)ls("pin",$("#sp").value);$("#sm").textContent="Ukládám…";
 try{S.msg=await store("save",s);S.edit=null;S.song=s.id;render()}catch(e){$("#sm").textContent="Nepodařilo se uložit: "+e.message}}
-else if(a==="del"){t.textContent="Opravdu smazat?";t.dataset.s="del2"}
-else if(a==="del2"){try{S.msg=await store("del",{id});}catch(e){S.msg="Chyba: "+e.message}S.song=null;render()}}
+else if(a==="del"){t.parentElement.innerHTML=(API?`<input class="f1" id="dp" type="password" placeholder="PIN" style="max-width:180px;margin:0">`:"")+`<button class="btn ac" data-s="del2" data-id="${esc(id)}">Smazat</button><button class="btn" data-s="open" data-id="${esc(id)}">Zrušit</button>`;const d=$("#dp");if(d)d.focus()}
+else if(a==="del2"){const d=$("#dp"),old=ls("pin");if(d)ls("pin",d.value);let ok=true;
+try{S.msg=await store("del",{id})}catch(e){ok=false;S.msg="Chyba: "+e.message;if(d)ls("pin",old||"")}
+S.song=ok?null:id;render()}}
 document.addEventListener("keydown",e=>{if(e.key==="Escape")drawer(false)});
 const m=location.hash.match(/^#(\d+)-(\d+)$/);if(m&&BIBLE[m[1]-1]&&BIBLE[m[1]-1][m[2]-1]){S.b=m[1]-1;S.c=m[2]-1}
 render();
