@@ -47,6 +47,10 @@ pre.song{white-space:pre-wrap;overflow-wrap:anywhere;font:var(--fs)/2 var(--ser)
 textarea.f1{min-height:45vh}
 .ac{background:var(--acc);color:var(--bg);border-color:var(--acc)}
 ruby{ruby-position:over}rt{font:700 .68em var(--sans);color:var(--ch);letter-spacing:.02em}
+.sec{display:block;font:700 .6em var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:1.2em 0 .2em}
+.tp{position:relative;display:flex;gap:6px}
+.pop{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;box-shadow:0 8px 30px rgba(0,0,0,.3);z-index:10}
+.pop .btn.on{background:var(--ink);color:var(--bg)}
 </style>
 </head>
 <body>
@@ -66,7 +70,7 @@ const BIBLE=[[["Na samém počátku historie naší země stojí Bůh. Ano, byl 
 const NAMES="Genesis|Exodus|Leviticus|Numeri|Deuteronomium|Jozue|Soudců|Rút|1. Samuelova|2. Samuelova|1. Královská|2. Královská|1. Paralipomenon|2. Paralipomenon|Ezdráš|Nehemjáš|Ester|Job|Žalmy|Přísloví|Kazatel|Píseň písní|Izajáš|Jeremjáš|Pláč|Ezechiel|Daniel|Ozeáš|Joel|Amos|Abdijáš|Jonáš|Micheáš|Nahum|Abakuk|Sofonjáš|Ageus|Zacharjáš|Malachiáš|Matouš|Marek|Lukáš|Jan|Skutky|Římanům|1. Korintským|2. Korintským|Galatským|Efezským|Filipským|Kolosským|1. Tesalonickým|2. Tesalonickým|1. Timoteovi|2. Timoteovi|Titovi|Filemonovi|Židům|Jakubův|1. Petrův|2. Petrův|1. Janův|2. Janův|3. Janův|Juda|Zjevení".split("|");
 const $=s=>document.querySelector(s),esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>{let o="";for(const c of s){const n=c.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();o+=n[0]||c}return o};
-let S={b:0,c:0,view:"read",focus:null,max:100,mode:"bible",song:null,edit:null,msg:""},idx=null;
+let S={b:0,c:0,view:"read",focus:null,max:100,mode:"bible",song:null,edit:null,msg:"",tr:0,pop:false,p0:0},idx=null;
 // verze: rozdělí "7-8 text" na číslo/rozsah a text, "***" přeskočí
 function verses(b,c){const out=[];BIBLE[b][c].forEach((t,i)=>{if(t.trim()==="***")return;const m=t.match(/^(\d+\s?[-–]\s?\d+)\s+([\s\S]*)$/);out.push(m?[m[1].replace(/\s/g,"–"),m[2],i]:[String(i+1),t,i])});return out}
 function terms(){return norm($("#q").value.trim()).split(/\s+/).filter(Boolean)}
@@ -93,7 +97,7 @@ const shown=res.slice(0,S.max);
 $("#main").innerHTML=`<article><p class="info">${res.length?`Nalezeno veršů: ${res.length}`+(sc==="book"?` v knize ${NAMES[S.b]}`:""):"Nic nenalezeno. Zkuste kratší nebo jiné slovo."}</p>`+
 shown.map(([b,c,i])=>{const t=BIBLE[b][c][i],m=t.match(/^(\d+\s?[-–]\s?\d+)\s+([\s\S]*)$/);return`<button class="r" data-b="${b}" data-c="${c}" data-v="${i}"><b>${NAMES[b]} ${c+1}:${m?m[1].replace(/\s/g,"–"):i+1}</b>${hl(m?m[2]:t,ts)}</button>`}).join("")+
 (res.length>S.max?`<button class="btn" id="more">Zobrazit dalších ${Math.min(100,res.length-S.max)}</button>`:"")+"</article>"}
-document.addEventListener("click",e=>{const t=e.target.closest("[data-b],#more,#menu,#fs,#th,#xn,#bd,#sg,[data-s]");if(!t)return;
+document.addEventListener("click",e=>{if(S.pop&&!e.target.closest(".pop,[data-s=tk]")){S.pop=false;const q=document.querySelector(".pop");if(q)q.remove()}const t=e.target.closest("[data-b],#more,#menu,#fs,#th,#xn,#bd,#sg,[data-s]");if(!t)return;
 if(t.id==="more"){S.max+=100;render()}else if(t.id==="xn"||t.id==="bd")drawer(false);else if(t.id==="sg"){S.mode=S.mode==="songs"?"bible":"songs";S.song=null;S.edit=null;drawer(false);render();window.scrollTo(0,0)}else if(t.dataset.s)songAct(t);else if(t.id==="menu"){if(S.mode==="songs"){S.mode="bible";render()}drawer(true)}
 else if(t.id==="fs"){const r=document.documentElement,v=parseInt(getComputedStyle(r).getPropertyValue("--fs"));r.style.setProperty("--fs",(v>=26?16:v+2)+"px")}
 else if(t.id==="th"){const r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"}
@@ -111,28 +115,57 @@ async function store(act,song){
 if(API){const r=await fetch(API,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify({act,pin:ls("pin")||"",song})});const j=await r.json();if(!j.ok)throw new Error(j.error||"chyba serveru");songs=j.songs;return"Uloženo na GitHub."}
 if(act==="del")songs=songs.filter(x=>x.id!==song.id);else{const i=songs.findIndex(x=>x.id===song.id);i<0?songs.push(song):songs[i]=song}
 ls("songs",JSON.stringify(songs));return"Uloženo jen v tomto prohlížeči (API není nastavené)."}
-const chords=h=>h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g,(m,c,b)=>`<ruby>${b||"\u00a0"}<rt>${c}</rt></ruby>`);
+const PN={C:0,D:2,E:4,F:5,G:7,A:9,H:11,B:10},NM=["C","C#","D","D#","E","F","F#","G","G#","A","B","H"];
+const CRE=/^([A-H])([#b]?)((?:maj|min|mi|m|M|dim|aug|sus|add|[0-9+°()\-#b])*)$/;
+const base=(L,a)=>L==="B"?10+(a==="#"?1:0):PN[L]+(a==="#"?1:a==="b"?-1:0);
+const firstChord=t=>{const re=/\[([^\]\s][^\]]{0,10})\]/g;let m;while((m=re.exec(t)))if(CRE.test(m[1].split("/")[0]))return m[1];return null};
+const pcOf=c=>{const m=c.split("/")[0].match(CRE);return(base(m[1],m[2])+12)%12};
+function tchord(c,n){return c.split("/").map((p,i)=>{const m=p.match(CRE);if(!m||(i>0&&m[3]))return p;return NM[(base(m[1],m[2])+n+24)%12]+m[3]}).join("/")}
+const chords=(h,n)=>h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g,(m,c,b)=>`<ruby>${b||"\u00a0"}<rt>${n?tchord(c,n):c}</rt></ruby>`);
+const secLabel=k=>{const m=k.match(/^V(\d+)$/i);return m?m[1]+". sloka":/^REF$/i.test(k)?"Refrén":k};
+function songHTML(t,n){let o="";for(const l of t.replace(/\r/g,"").split("\n")){const m=l.match(/^\s*\{([^}]+)\}\s*$/);o+=m?`<span class="sec">${esc(secLabel(m[1].trim()))}</span>`:chords(esc(l),n)+"\n"}return o}
+// {V2} bez akordů ← akordy z {V1} (po řádcích); prázdná část (např. {REF}) ← text dřívější části se stejným názvem
+function expand(t){
+const lines=[];for(const l of t.replace(/\r/g,"").split("\n")){const m=l.match(/^\s*(\{[^}]+\})[ \t]+(\S.*)$/);if(m)lines.push(m[1],m[2]);else lines.push(l)}
+const secs=[{k:null,b:[]}];for(const l of lines){const m=l.match(/^\s*\{([^}]+)\}\s*$/);if(m)secs.push({k:m[1].trim().toUpperCase(),r:m[1].trim(),b:[]});else secs[secs.length-1].b.push(l)}
+const trim=b=>{let a=0,z=b.length;while(a<z&&!b[a].trim())a++;while(z>a&&!b[z-1].trim())z--;return b.slice(a,z)};
+const cps=l=>{const r=[],re=/\[([^\]]*)\]/g;let m,rem=0;while((m=re.exec(l))){r.push([m.index-rem,m[1]]);rem+=m[0].length}return r};
+const snap=(p,o)=>{const st=[],re=/\S+/g;let m;while((m=re.exec(p)))st.push(m.index);if(!st.length)return 0;let b=st[0];for(const x of st)if(Math.abs(x-o)<Math.abs(b-o))b=x;return b};
+const put=(p,cs)=>{let r="",pos=0;for(const[o,c]of cs.map(([o,c])=>[snap(p,o),c])){r+=p.slice(pos,o)+"["+c+"]";pos=o}return r+p.slice(pos)};
+const done={};let v1=null;
+for(const s of secs){if(s.k===null)continue;const body=trim(s.b);
+if(!body.length){if(done[s.k])s.b=[...done[s.k],""];continue}
+if(/^V\d+$/.test(s.k)&&s.k!=="V1"&&v1){const src=v1.filter(l=>l.trim());let i=0;s.b=s.b.map(l=>{if(!l.trim())return l;const sl=src[i++];return sl&&!/\[/.test(l)?put(l,cps(sl)):l})}
+if(!done[s.k])done[s.k]=trim(s.b);if(s.k==="V1"&&!v1)v1=done.V1}
+return secs.map(s=>(s.k===null?[]:["{"+s.r+"}"]).concat(s.b)).flat().join("\n")}
+document.addEventListener("change",e=>{if(e.target.id==="sx")e.target.value=expand(e.target.value)});
 async function renderSongs(){await loadSongs();const m=$("#main"),qv=norm($("#q").value.trim());
 if(S.edit){const s=S.edit;m.innerHTML=`<article><h2>${s.id?"Upravit písničku":"Nová písnička"}</h2>
 <input class="f1" id="st" placeholder="Název" value="${esc(s.title)}">
 <input class="f1" id="sa" placeholder="Autor (nepovinné)" value="${esc(s.author||"")}">
 <textarea class="f1" id="sx" placeholder="Text písničky – akordy piš do hranatých závorek, např. Jsi Kr[G]al">${esc(s.text)}</textarea>
+<p class="info">Akordy: Jsi Kr[G]al · Části na samostatný řádek: {V1}, {V2}, {REF}. {V2} bez akordů se doplní podle {V1}, prázdné {REF} se doplní refrénem.</p>
 ${API?`<input class="f1" id="sp" type="password" placeholder="PIN pro ukládání" value="${esc(ls("pin")||"")}">`:""}
 <p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button></article>`;return}
 if(S.song){const s=songs.find(x=>x.id===S.song);if(s){const i=S.msg||s.author||"";S.msg="";
-m.innerHTML=`<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${chords(esc(s.text))}</pre><div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button><button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;return}S.song=null}
+const f=firstChord(s.text),p0=f?pcOf(f):0;S.p0=p0;const cur=((p0+S.tr)%12+12)%12;
+const tp=f?`<div class="tp"><button class="btn" data-s="tm">−1</button><button class="btn" data-s="tk">${esc(tchord(f,S.tr))} ▾</button><button class="btn" data-s="tp">+1</button>${S.pop?`<div class="pop">${NM.map((n,k)=>`<button class="btn${k===cur?" on":""}" data-s="key" data-k="${k}">${n}</button>`).join("")}</div>`:""}</div>`:"";
+m.innerHTML=`<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(s.text,S.tr)}</pre><div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;return}S.song=null}
 const l=songs.filter(s=>!qv||qv.split(/\s+/).every(t=>norm(s.title+" "+(s.author||"")+" "+s.text).includes(t))).sort((a,b)=>a.title.localeCompare(b.title,"cs"));
 m.innerHTML=`<article><h2>Zpěvník</h2><p class="info">${esc(S.msg||l.length+" písniček")}</p><button class="btn ac" data-s="new">+ Nová písnička</button><div style="height:14px"></div>`+l.map(s=>`<button class="r" data-s="open" data-id="${esc(s.id)}"><b>${esc(s.title)}</b>${esc(s.author||"")}</button>`).join("")+`</article>`;S.msg=""}
 async function songAct(t){const a=t.dataset.s,id=t.dataset.id;
-if(a==="open"){S.song=id;window.scrollTo(0,0);render()}
-else if(a==="back"){S.song=null;render()}
+if(a==="open"){const keep=S.song===id;S.song=id;if(!keep){S.tr=0;S.pop=false;window.scrollTo(0,0)}render()}
+else if(a==="back"){S.song=null;S.pop=false;render()}
+else if(a==="tm"||a==="tp"){S.tr=((S.tr+(a==="tm"?-1:1))%12+12)%12;render()}
+else if(a==="tk"){S.pop=!S.pop;render()}
+else if(a==="key"){S.tr=((+t.dataset.k-S.p0)%12+12)%12;S.pop=false;render()}
 else if(a==="new"){S.edit={title:"",author:"",text:""};render()}
 else if(a==="edit"){S.edit={...songs.find(x=>x.id===id)};render()}
 else if(a==="cancel"){S.edit=null;render()}
-else if(a==="save"){const s={...S.edit,title:$("#st").value.trim(),author:$("#sa").value.trim(),text:$("#sx").value};
+else if(a==="save"){const s={...S.edit,title:$("#st").value.trim(),author:$("#sa").value.trim(),text:expand($("#sx").value)};
 if(!s.title||!s.text.trim()){$("#sm").textContent="Vyplň název a text.";return}
 if(!s.id)s.id=Date.now().toString(36);if(API)ls("pin",$("#sp").value);$("#sm").textContent="Ukládám…";
-try{S.msg=await store("save",s);S.edit=null;S.song=s.id;render()}catch(e){$("#sm").textContent="Nepodařilo se uložit: "+e.message}}
+try{S.msg=await store("save",s);S.edit=null;S.song=s.id;S.tr=0;render()}catch(e){$("#sm").textContent="Nepodařilo se uložit: "+e.message}}
 else if(a==="del"){t.parentElement.innerHTML=(API?`<input class="f1" id="dp" type="password" placeholder="PIN" style="max-width:180px;margin:0">`:"")+`<button class="btn ac" data-s="del2" data-id="${esc(id)}">Smazat</button><button class="btn" data-s="open" data-id="${esc(id)}">Zrušit</button>`;const d=$("#dp");if(d)d.focus()}
 else if(a==="del2"){const d=$("#dp"),old=ls("pin");if(d)ls("pin",d.value);let ok=true;
 try{S.msg=await store("del",{id})}catch(e){ok=false;S.msg="Chyba: "+e.message;if(d)ls("pin",old||"")}
