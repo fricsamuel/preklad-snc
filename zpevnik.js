@@ -181,7 +181,7 @@ document.addEventListener("click", e => {
     if (S.pop && !e.target.closest(".pop,[data-s=tk]")) { S.pop = false; const q = document.querySelector(".pop"); if (q) q.remove() } const t = e.target.closest("[data-s],#fs,#th"); if (!t) return;
     if (t.dataset.s) songAct(t);
     else if (t.id === "fs") { const r = document.documentElement, v = parseInt(getComputedStyle(r).getPropertyValue("--fs")); r.style.setProperty("--fs", (v >= 26 ? 16 : v + 2) + "px") }
-    else if (t.id === "th") { const r = document.documentElement, d = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme:dark)").matches; r.dataset.theme = d ? "light" : "dark" }
+    else if (t.id === "th") { const r = document.documentElement, d = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme:dark)").matches; const next = d ? "light" : "dark"; r.dataset.theme = next; localStorage.setItem("theme", next) }
 });
 let tm; $("#q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(() => { if (S.edit) return; S.song = null; renderSongs() }, 180) });
 renderSongs();

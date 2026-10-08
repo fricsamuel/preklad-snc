@@ -32,7 +32,7 @@ shown.map(([b,c,i])=>{const t=BIBLE[b][c][i],m=t.match(/^(\d+\s?[-–]\s?\d+)\s+
 document.addEventListener("click",e=>{const t=e.target.closest("[data-b],#more,#menu,#fs,#th,#xn,#bd");if(!t)return;
 if(t.id==="more"){S.max+=100;render()}else if(t.id==="xn"||t.id==="bd")drawer(false);else if(t.id==="menu")drawer(true);
 else if(t.id==="fs"){const r=document.documentElement,v=parseInt(getComputedStyle(r).getPropertyValue("--fs"));r.style.setProperty("--fs",(v>=26?16:v+2)+"px")}
-else if(t.id==="th"){const r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"}
+else if(t.id==="th"){const r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;const next=d?"light":"dark";r.dataset.theme=next;localStorage.setItem("theme",next)}
 else if(t.dataset.b!=null){const b=+t.dataset.b;if(t.classList.contains("bk")){go(b,0,null,true)}else go(b,+(t.dataset.c??0),t.dataset.v!=null?+t.dataset.v:null)}});
 let tm;$("#q").addEventListener("input",()=>{clearTimeout(tm);tm=setTimeout(()=>{S.max=100;S.focus=null;S.view=$("#sc").value==="chapter"?"read":"results";render()},180)});
 $("#sc").addEventListener("change",()=>{S.max=100;S.view=$("#sc").value==="chapter"?"read":"results";render()});

@@ -1,24 +1,98 @@
 <!DOCTYPE html>
 <html lang="cs">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Slovo na cestu – Bible</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Instrument+Sans:wght@400;600&display=swap">
-<link rel="stylesheet" href="style.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Slovo na cestu & Zpěvník</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Instrument+Sans:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="style.css">
+    <script>(function () { const t = localStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; })();</script>
 </head>
+
 <body>
-<header>
-<button class="btn" id="menu" aria-label="Seznam knih">Knihy</button>
-<a href="zpevnik.html" class="btn" id="sg">Zpěvník</a>
-<h1>Slovo na cestu</h1>
-<input id="q" type="search" placeholder="Hledat (např. láska, boží dítě)…" aria-label="Hledat">
-<select id="sc" aria-label="Kde hledat"><option value="chapter">V kapitole</option><option value="book">V knize</option><option value="all">V celé Bibli</option></select>
-<button class="btn" id="fs" aria-label="Změnit velikost písma">Aa</button>
-<button class="btn" id="th" aria-label="Přepnout motiv">◐</button>
-</header>
-<div id="bd"></div><div class="wrap"><nav id="nav"></nav><main id="main"></main></div>
-<script src="bible-data.js"></script>
-<script src="bible.js"></script>
+    <div class="portal-wrap">
+        <header class="portal-nav">
+            <div class="portal-brand">
+                <span>Slovo na cestu & Zpěvník</span>
+            </div>
+            <button class="btn" id="th" aria-label="Přepnout motiv">◐</button>
+        </header>
+
+        <main>
+            <section class="portal-hero">
+                <span class="portal-badge">Knihovna & Písně</span>
+                <h1>Co chceš dnes otevřít?</h1>
+                <p>Vyber si mezi Biblí pro čtení a studium Božího slova a zpěvníkem pro chvály a promítání na
+                    shromáždění.</p>
+            </section>
+
+            <section class="portal-grid">
+                <a href="bible.html" class="portal-card" id="card-bible">
+                    <div class="portal-card-icon" aria-hidden="true">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            <line x1="8" y1="6" x2="16" y2="6"></line>
+                            <line x1="8" y1="10" x2="16" y2="10"></line>
+                        </svg>
+                    </div>
+                    <h2>Bible</h2>
+                    <div class="portal-card-subtitle">Slovo na cestu (SNC)</div>
+                    <p class="portal-card-desc">Překlad Slovo Na Cestu. 66 kniha Starého a Nového zákona</p>
+                    <div class="portal-tags">
+                        <span class="portal-tag">66 knih</span>
+                        <span class="portal-tag">Hledání v textu</span>
+                        <span class="portal-tag">Nastavení písma</span>
+                    </div>
+                    <div class="portal-card-btn">
+                        <span>Otevřít Bibli</span>
+                        <span aria-hidden="true">→</span>
+                    </div>
+                </a>
+
+                <a href="zpevnik.html" class="portal-card" id="card-zpevnik">
+                    <div class="portal-card-icon" aria-hidden="true">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                    </div>
+                    <h2>Zpěvník</h2>
+                    <div class="portal-card-subtitle">Písně & Prezentace</div>
+                    <p class="portal-card-desc">Sbírka křesťanských písní a chval s akordy. Transpozice tónin v reálném
+                        čase, editor a export pro promítání ve FreeShow nebo PowerPointu.</p>
+                    <div class="portal-tags">
+                        <span class="portal-tag">Akordy & transpozice</span>
+                        <span class="portal-tag">FreeShow (.show)</span>
+                        <span class="portal-tag">PowerPoint (.pptx)</span>
+                    </div>
+                    <div class="portal-card-btn">
+                        <span>Otevřít Zpěvník</span>
+                        <span aria-hidden="true">→</span>
+                    </div>
+                </a>
+            </section>
+        </main>
+
+        <footer class="portal-footer">
+            <div>Slovo na cestu (SNC) · Zpěvník s akordy a exportem</div>
+        </footer>
+    </div>
+
+    <script>
+        document.getElementById("th").addEventListener("click", () => {
+            const r = document.documentElement;
+            const isDark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme:dark)").matches;
+            const next = isDark ? "light" : "dark";
+            r.dataset.theme = next;
+            localStorage.setItem("theme", next);
+        });
+    </script>
 </body>
+
 </html>

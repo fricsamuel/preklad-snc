@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Zpěvník</title>
+<title>Slovo na cestu – Bible</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Instrument+Sans:wght@400;600&display=swap">
 <link rel="stylesheet" href="style.css">
 <script>(function(){const t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;})();</script>
@@ -11,14 +11,16 @@
 <body>
 <header>
 <a href="index.html" class="btn" title="Úvodní stránka">⌂ Domů</a>
-<a href="bible.html" class="btn">Bible</a>
-<h1>Zpěvník</h1>
-<input id="q" type="search" placeholder="Hledat píseň..." aria-label="Hledat">
+<button class="btn" id="menu" aria-label="Seznam knih">Knihy</button>
+<a href="zpevnik.html" class="btn" id="sg">Zpěvník</a>
+<h1>Slovo na cestu</h1>
+<input id="q" type="search" placeholder="Hledat (např. láska, boží dítě)…" aria-label="Hledat">
+<select id="sc" aria-label="Kde hledat"><option value="chapter">V kapitole</option><option value="book">V knize</option><option value="all">V celé Bibli</option></select>
 <button class="btn" id="fs" aria-label="Změnit velikost písma">Aa</button>
 <button class="btn" id="th" aria-label="Přepnout motiv">◐</button>
 </header>
 <div id="bd"></div><div class="wrap"><nav id="nav"></nav><main id="main"></main></div>
-<script src="config.js"></script>
-<script src="zpevnik.js"></script>
+<script src="bible-data.js"></script>
+<script src="bible.js"></script>
 </body>
 </html>
