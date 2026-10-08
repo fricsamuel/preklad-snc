@@ -22,7 +22,7 @@ const firstChord = t => { const re = /\[([^\]\s][^\]]{0,10})\]/g; let m; while (
 const pcOf = c => { const m = c.split("/")[0].match(CRE); return (base(m[1], m[2]) + 12) % 12 };
 function tchord(c, n) { return c.split("/").map((p, i) => { const m = p.match(CRE); if (!m || (i > 0 && m[3])) return p; return NM[(base(m[1], m[2]) + n + 24) % 12] + m[3] }).join("/") }
 const chords = (h, n) => h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => `<ruby>${b || "\u00a0"}<rt>${n ? tchord(c, n) : c}</rt></ruby>`);
-const secLabel = k => { const m = k.match(/^V(\d+)$/i); return m ? m[1] + ". sloka" : /^REF$/i.test(k) ? "Refrén" : k };
+const secLabel = k => { const m = k.match(/^V(\d+)$/i); return m ? m[1] + ". sloka" : /^REF$/i.test(k) ? "Refrén" : /^BRIDGE$/i.test(k) ? "Bridge" : /^CODA$/i.test(k) ? "Coda" : k };
 function songHTML(t, n) { let o = ""; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*\{([^}]+)\}\s*$/); o += m ? `<span class="sec">${esc(secLabel(m[1].trim()))}</span>` : chords(esc(l), n) + "\n" } return o }
 function expand(t) {
     const lines = []; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*(\{[^}]+\})[ \t]+(\S.*)$/); if (m) lines.push(m[1], m[2]); else lines.push(l) }
@@ -34,7 +34,7 @@ function expand(t) {
     const done = {}; let v1 = null;
     for (const s of secs) {
         if (s.k === null) continue; const body = trim(s.b);
-        if (!body.length) { if (done[s.k]) s.b = [...done[s.k], ""]; continue }
+        if (!body.length) { if (done[s.k]) s.b = [...done[s.k], ""]; else if (/^REF$/i.test(s.k) && done["REF"]) s.b = [...done["REF"], ""]; else if (/^BRIDGE$/i.test(s.k) && done["BRIDGE"]) s.b = [...done["BRIDGE"], ""]; else if (/^CODA$/i.test(s.k) && done["CODA"]) s.b = [...done["CODA"], ""]; continue }
         if (/^V\d+$/.test(s.k) && s.k !== "V1" && v1) { const src = v1.filter(l => l.trim()); let i = 0; s.b = s.b.map(l => { if (!l.trim()) return l; const sl = src[i++]; return sl && !/\[/.test(l) ? put(l, cps(sl)) : l }) }
         if (!done[s.k]) done[s.k] = trim(s.b); if (s.k === "V1" && !v1) v1 = done.V1
     }
@@ -63,7 +63,7 @@ function fsShow(s, ps, seq, per) {
         const p = ps[i], key = p.label + "|" + JSON.stringify(p.blocks);
         if (!groups[key]) {
             const ch = []; for (const b of p.blocks) { if (!per) ch.push(b); else for (let a = 0; a < b.length; a += per)ch.push(b.slice(a, a + per)) }
-            const ids = ch.map(() => id()), col = /^V\d+$/i.test(p.k) ? "#5825f5" : /^REF$/i.test(p.k) ? "#f525a5" : "#25a5f5";
+            const ids = ch.map(() => id()), col = /^V\d+$/i.test(p.k) ? "#5825f5" : /^REF$/i.test(p.k) ? "#f525a5" : /^BRIDGE$/i.test(p.k) ? "#f5a525" : /^CODA$/i.test(p.k) ? "#25f5a5" : "#25a5f5";
             ch.forEach((c, j) => { slides[ids[j]] = j ? { group: null, color: null, settings: {}, notes: "", items: [item(c)] } : { group: p.label, color: col, settings: {}, ...(ids.length > 1 ? { children: ids.slice(1) } : {}), notes: "", items: [item(c)] } });
             groups[key] = ids[0]
         }
@@ -74,7 +74,7 @@ function fsShow(s, ps, seq, per) {
 }
 document.addEventListener("change", e => { if (e.target.id === "pl") S.pl = +e.target.value });
 function qlText(s, ps, seq, per) {
-    const nm = p => /^V\d+$/i.test(p.k) ? "Verse" : /^REF$/i.test(p.k) ? "Chorus" : p.k ? p.label : "Verse";
+    const nm = p => /^V\d+$/i.test(p.k) ? "Verse" : /^REF$/i.test(p.k) ? "Chorus" : /^BRIDGE$/i.test(p.k) ? "Bridge" : /^CODA$/i.test(p.k) ? "Coda" : p.k ? p.label : "Verse";
     let o = "Title=" + s.title + "\n" + (s.author ? "Author=" + s.author + "\n" : "");
     for (const i of seq) {
         const p = ps[i], ch = []; for (const b of p.blocks) { if (!per) ch.push(b); else for (let a = 0; a < b.length; a += per)ch.push(b.slice(a, a + per)) }
@@ -97,10 +97,13 @@ async function mkPptx(s, ps, seq, per, name) {
     await px.writeFile({ fileName: name })
 }
 const QS = [["", "dur"], ["m", "m"], ["7", "7"], ["m7", "m7"], ["maj7", "maj7"], ["sus4", "sus4"], ["sus2", "sus2"], ["dim", "dim"], ["aug", "aug"], ["add9", "add9"], ["6", "6"]];
-function edBar() { const q = S.q || ""; return `<div class="ed"><b>Akord</b><div class="qs">${QS.map(([v, n]) => `<button type="button" class="${v === q ? "on" : ""}" data-s="iq" data-q="${v}">${n}</button>`).join("")}</div><div class="rs">${NM.map(r => `<button type="button" data-s="ins" data-r="${r}" data-v="[${r + q}]">${r + q}</button>`).join("")}</div><b>Části písničky</b><div class="qs"><button type="button" data-s="isv">+ Sloka</button><button type="button" data-s="irf">+ Refrén</button></div></div>` }
+function edBar() { const q = S.q || ""; return `<div class="ed"><b>Akord</b><div class="qs">${QS.map(([v, n]) => `<button type="button" class="${v === q ? "on" : ""}" data-s="iq" data-q="${v}">${n}</button>`).join("")}</div><div class="rs">${NM.map(r => `<button type="button" data-s="ins" data-r="${r}" data-v="[${r + q}]">${r + q}</button>`).join("")}</div><b>Části písničky</b><div class="qs"><button type="button" data-s="isv">+ Sloka</button><button type="button" data-s="irf">+ Refrén</button><button type="button" data-s="ibr">+ Bridge</button><button type="button" data-s="ico">+ Coda</button></div></div>` }
 function secStr(t, a, k) {
     const pre = t.slice(0, a); const lead = !pre || /\n\n$/.test(pre) ? "" : /\n$/.test(pre) ? "\n" : "\n\n";
-    let name = "REF"; if (k === "V") { const n = [...t.matchAll(/\{V(\d+)\}/gi)].map(m => +m[1]); name = "V" + (n.length ? Math.max(...n) + 1 : 1) }
+    let name = "REF";
+    if (k === "V") { const n = [...t.matchAll(/\{V(\d+)\}/gi)].map(m => +m[1]); name = "V" + (n.length ? Math.max(...n) + 1 : 1) }
+    else if (k === "B") name = "BRIDGE";
+    else if (k === "C") name = "CODA";
     return lead + "{" + name + "}\n"
 }
 document.addEventListener("mousedown", e => { if (e.target.closest(".ed button")) e.preventDefault() });
@@ -148,7 +151,7 @@ async function songAct(t) {
     else if (a === "pa") { S.seq.push(+t.dataset.i); renderSongs() }
     else if (a === "px") { S.seq.splice(+t.dataset.i, 1); renderSongs() }
     else if (a === "iq") { S.q = t.dataset.q; document.querySelectorAll(".ed .qs button[data-q]").forEach(b => b.classList.toggle("on", b === t)); document.querySelectorAll(".rs button").forEach(b => { const c = b.dataset.r + S.q; b.dataset.v = "[" + c + "]"; b.textContent = c }) }
-    else if (a === "ins" || a === "isv" || a === "irf") { const ta = $("#sx"); if (ta) { const p = ta.selectionStart; ta.setRangeText(a === "ins" ? t.dataset.v : secStr(ta.value, p, a === "isv" ? "V" : "REF"), p, p, "end"); ta.focus() } }
+    else if (a === "ins" || a === "isv" || a === "irf" || a === "ibr" || a === "ico") { const ta = $("#sx"); if (ta) { const p = ta.selectionStart; const k = a === "isv" ? "V" : a === "irf" ? "REF" : a === "ibr" ? "B" : a === "ico" ? "C" : null; ta.setRangeText(a === "ins" ? t.dataset.v : secStr(ta.value, p, k), p, p, "end"); ta.focus() } }
     else if (a === "ppt") {
         const so = songs.find(x => x.id === S.song), ps = parts(so.text), pm = $("#pm");
         if (!S.seq.length) { pm.textContent = "Přidej aspoň jednu část."; return }
