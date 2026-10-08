@@ -59,6 +59,16 @@ ruby{ruby-position:over}rt{font:700 .68em var(--sans);color:var(--ch);letter-spa
 .pp{position:relative;background:#f28c28;border-color:#f28c28;color:#1a1208;font-weight:600;padding-left:22px;margin:8px 0 0 10px}
 .pp:hover{background:#ffa13d;border-color:#ffa13d}
 .pp img{position:absolute;top:-11px;left:-11px;width:27px;height:auto;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.edw{display:flex;gap:14px;align-items:flex-start}
+.edw textarea{flex:1;min-width:0}
+.ed{flex:none;width:236px;position:sticky;top:76px;font-family:var(--sans)}
+.ed b{font-size:13px;color:var(--mute)}
+.ed button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:7px 9px;cursor:pointer;font:600 14px var(--sans)}
+.ed button:hover{border-color:var(--acc)}
+.ed .on{background:var(--ink);color:var(--bg)}
+.ed .qs,.ed .rs{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 14px}
+.ed .rs button{min-width:46px;color:var(--ch)}
+@media(max-width:700px){.edw{flex-direction:column}.ed{width:100%;position:static}}
 </style>
 </head>
 <body>
@@ -184,11 +194,18 @@ const mx=Math.max(...c.map(l=>l.length)),fs=Math.max(28,Math.min(54,Math.round(6
 sl.addText(c.map((l,j)=>({text:l,options:{breakLine:j<c.length-1}})),{x:.5,y:.5,w:12.33,h:6.5,align:"center",valign:"middle",color:"FFFFFF",fontFace:"Calibri",fontSize:fs,fit:"shrink",isTextBox:true});
 sl.addNotes(p.label)}}
 await px.writeFile({fileName:name})}
+const QS=[["","dur"],["m","m"],["7","7"],["m7","m7"],["maj7","maj7"],["sus4","sus4"],["sus2","sus2"],["dim","dim"],["aug","aug"],["add9","add9"],["6","6"]];
+// lišta v editoru: akordy (12 tónů × typ) + nová sloka / refrén na místo kurzoru
+function edBar(){const q=S.q||"";return`<div class="ed"><b>Akord</b><div class="qs">${QS.map(([v,n])=>`<button type="button" class="${v===q?"on":""}" data-s="iq" data-q="${v}">${n}</button>`).join("")}</div><div class="rs">${NM.map(r=>`<button type="button" data-s="ins" data-r="${r}" data-v="[${r+q}]">${r+q}</button>`).join("")}</div><b>Části písničky</b><div class="qs"><button type="button" data-s="isv">+ Sloka</button><button type="button" data-s="irf">+ Refrén</button></div></div>`}
+function secStr(t,a,k){const pre=t.slice(0,a);const lead=!pre||/\n\n$/.test(pre)?"":/\n$/.test(pre)?"\n":"\n\n";
+let name="REF";if(k==="V"){const n=[...t.matchAll(/\{V(\d+)\}/gi)].map(m=>+m[1]);name="V"+(n.length?Math.max(...n)+1:1)}
+return lead+"{"+name+"}\n"}
+document.addEventListener("mousedown",e=>{if(e.target.closest(".ed button"))e.preventDefault()});
 async function renderSongs(){await loadSongs();const m=$("#main"),qv=norm($("#q").value.trim());
 if(S.edit){const s=S.edit;m.innerHTML=`<article><h2>${s.id?"Upravit písničku":"Nová písnička"}</h2>
 <input class="f1" id="st" placeholder="Název" value="${esc(s.title)}">
 <input class="f1" id="sa" placeholder="Autor (nepovinné)" value="${esc(s.author||"")}">
-<textarea class="f1" id="sx" placeholder="Text písničky – akordy piš do hranatých závorek, např. Jsi Kr[G]al">${esc(s.text)}</textarea>
+<div class="edw"><textarea class="f1" id="sx" placeholder="Text písničky – akordy piš do hranatých závorek, např. Jsi Kr[G]al">${esc(s.text)}</textarea>${edBar()}</div>
 <p class="info">Akordy: Jsi Kr[G]al · Části na samostatný řádek: {V1}, {V2}, {REF}. {V2} bez akordů se doplní podle {V1}, prázdné {REF} se doplní refrénem.</p>
 ${API?`<input class="f1" id="sp" type="password" placeholder="PIN pro ukládání" value="${esc(ls("pin")||"")}">`:""}
 <p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button></article>`;return}
@@ -215,6 +232,8 @@ else if(a==="key"){S.tr=((+t.dataset.k-S.p0)%12+12)%12;S.pop=false;render()}
 else if(a==="pr"){S.pres=!S.pres;S.seq=null;render()}
 else if(a==="pa"){S.seq.push(+t.dataset.i);render()}
 else if(a==="px"){S.seq.splice(+t.dataset.i,1);render()}
+else if(a==="iq"){S.q=t.dataset.q;document.querySelectorAll(".ed .qs button[data-q]").forEach(b=>b.classList.toggle("on",b===t));document.querySelectorAll(".rs button").forEach(b=>{const c=b.dataset.r+S.q;b.dataset.v="["+c+"]";b.textContent=c})}
+else if(a==="ins"||a==="isv"||a==="irf"){const ta=$("#sx");if(ta){const p=ta.selectionStart;ta.setRangeText(a==="ins"?t.dataset.v:secStr(ta.value,p,a==="isv"?"V":"REF"),p,p,"end");ta.focus()}}
 else if(a==="ppt"){const so=songs.find(x=>x.id===S.song),ps=parts(so.text),pm=$("#pm");
 if(!S.seq.length){pm.textContent="Přidej aspoň jednu část.";return}
 pm.textContent="Vytvářím PowerPoint…";
