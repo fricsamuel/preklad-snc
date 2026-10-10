@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stránka nenalezena</title>
+<script>
+// GitHub Pages sem pošle každou adresu, ke které neexistuje soubor.
+// /preklad-snc/jsi-kral-cz  ->  /preklad-snc/zpevnik.html?song=jsi-kral-cz  (zpevnik.js pak vrátí hezkou adresu)
+(function () {
+  var BASE = "/preklad-snc/"; // změň, pokud se repozitář jmenuje jinak (lokálně "/")
+  var p = location.pathname;
+  if (p.indexOf(BASE) === 0) {
+    var slug = p.slice(BASE.length).replace(/\/$/, "");
+    if (/^[a-z0-9-]+$/.test(slug)) location.replace(BASE + "zpevnik.html?song=" + slug + location.hash);
+  }
+})();
+</script>
+<style>body{font:18px/1.6 system-ui,sans-serif;max-width:32em;margin:15vh auto;padding:0 20px;color:#1c2630}a{color:#2f5d50}</style>
+</head>
+<body>
+<h1>Stránka nenalezena</h1>
+<p><a href="/preklad-snc/zpevnik.html">Zpěvník</a> · <a href="/preklad-snc/">Úvod</a></p>
+</body>
+</html>
