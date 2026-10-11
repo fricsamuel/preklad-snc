@@ -305,7 +305,7 @@ nav.open {
 pre.song {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    font: var(--fs)/2 var(--ser);
+    font: var(--fs)/1.6 var(--ser);
     margin: 0
 }
 
@@ -330,15 +330,7 @@ textarea.f1 {
     border-color: var(--acc)
 }
 
-ruby {
-    ruby-position: over
-}
 
-rt {
-    font: 700 .68em var(--sans);
-    color: var(--ch);
-    letter-spacing: .02em
-}
 
 .sec {
     display: block;
@@ -676,28 +668,49 @@ rt {
     border-top: 1px solid var(--line);
 }
 
-/* Tlačítko Canva v menu prezentace (vedle PowerPointu) */
-.cv {
-    position: relative;
-    background: linear-gradient(135deg, #00c4cc, #7d2ae8);
-    border-color: transparent;
-    color: #fff;
-    font-weight: 600;
-    padding-left: 22px;
-    margin: 8px 0 0 10px
+/* Akordy nad textem: levý okraj akordu = místo, kam je v textu napsán */
+.cw {
+    display: inline-flex;
+    flex-direction: column-reverse;
+    vertical-align: bottom
 }
 
-.cv:hover {
-    filter: brightness(1.1);
-    border-color: transparent;
-    color: #fff
+.cc {
+    font: 700 .68em/1.15 var(--sans);
+    color: var(--ch);
+    letter-spacing: .02em;
+    padding-right: .3em;
+    white-space: pre
 }
 
-.cv img {
-    position: absolute;
-    top: -11px;
-    left: -11px;
-    width: 27px;
-    height: 27px;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .45))
+/* AI import: fronta a koncepty */
+.aib {
+    margin: 0 0 18px
+}
+
+.job {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 8px 0;
+    font: 14px/1.5 var(--sans)
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 16px;
+    border-radius: 10px;
+    z-index: 50;
+    font: 14px var(--sans);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .3)
+}
+
+.toast[hidden] {
+    display: none
 }
