@@ -266,9 +266,9 @@ async function aiRun(j) {
         const images = await Promise.all(j.files.map(f => shrink(f)));
         const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ act: "ai", pin: ls("pin") || "", images }) });
         const res = await r.json(); if (!res.ok) throw new Error(res.error || "chyba serveru");
-        drafts.push({ id: j.id, title: res.song.title || "Bez názvu", author: res.song.author || "", text: expand(res.song.text), notes: res.notes || "" });
+        drafts.push({ id: j.id, title: res.song.title || "Bez názvu", author: res.song.author || "", text: expand(res.song.text), notes: (res.via && res.via !== "Gemini" ? "Přepsal záložní model (" + res.via + "), zkontroluj pozorně. " : "") + (res.notes || "") });
         saveDrafts(); jobs = jobs.filter(x => x !== j);
-        toast("AI dokončila: " + (res.song.title || j.name));
+        toast("AI dokončila: " + (res.song.title || j.name) + (res.via && res.via !== "Gemini" ? " (záložní model: " + res.via + ")" : ""));
     } catch (err) { j.st = "err"; j.msg = err.message; toast("AI se nepovedla: " + j.name) }
     aiRefresh();
 }
