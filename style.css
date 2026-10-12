@@ -714,3 +714,112 @@ textarea.f1 {
 .toast[hidden] {
     display: none
 }
+
+/* ---- Chord diagram popup ---- */
+.cc {
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background .15s, color .15s;
+}
+.cc:hover {
+    background: color-mix(in srgb, var(--ch) 15%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--ch) 35%, transparent);
+}
+
+.cdpop {
+    position: absolute;
+    z-index: 100;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.12);
+    padding: 0;
+    min-width: 200px;
+    overflow: hidden;
+    animation: cdpop-in .15s ease;
+}
+@keyframes cdpop-in {
+    from { opacity: 0; transform: translateY(-6px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+.cdhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px 6px;
+    border-bottom: 1px solid var(--line);
+}
+.cdname {
+    font: 700 16px var(--sans);
+    color: var(--ch);
+    letter-spacing: .02em;
+}
+.cdcl {
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--mute);
+    padding: 2px 4px;
+    border-radius: 6px;
+}
+.cdcl:hover { color: var(--ink); background: var(--bg); }
+
+.cdtabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px 6px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+}
+.cdtb {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 5px 9px;
+    font: 600 12px var(--sans);
+    cursor: pointer;
+    color: var(--mute);
+    transition: background .12s, color .12s, border-color .12s;
+    white-space: nowrap;
+}
+.cdtb:hover { background: var(--panel); color: var(--ink); border-color: var(--line); }
+.cdtb.cdon {
+    background: var(--ch);
+    color: #fff;
+    border-color: var(--ch);
+}
+
+.cdcont {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 14px 14px;
+}
+.cdno {
+    font: 14px var(--sans);
+    color: var(--mute);
+    padding: 8px 0;
+}
+
+/* Fretboard SVG */
+.cdfb { display: block; overflow: visible; }
+.cdg  { stroke: var(--line); stroke-width: 1.5; }
+.cdnut { fill: var(--ink); }
+.cdd  { fill: var(--ch); }
+.cdo  { fill: none; stroke: var(--ink); stroke-width: 2; }
+.cdx  { fill: var(--mute); font: bold 14px var(--sans); }
+.cdfl { fill: var(--mute); font: 11px var(--sans); }
+
+/* Piano SVG */
+.cppiano { display: block; border-radius: 6px; overflow: visible; }
+.cpwk { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+.cpbk { fill: var(--ink); }
+.cpwk.cpa { fill: color-mix(in srgb, var(--ch) 22%, var(--panel)); stroke: var(--ch); stroke-width: 1.5; }
+.cpbk.cpa { fill: var(--ch); }
+/* dots: on white key = dark ink, on black key = white */
+.cpwk + .cpd { fill: var(--ink); }
+.cpbk + .cpd { fill: #fff; }
+

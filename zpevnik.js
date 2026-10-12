@@ -54,7 +54,7 @@ const firstChord = t => { const re = /\[([^\]\s][^\]]{0,10})\]/g; let m; while (
 const pcOf = c => { const m = c.split("/")[0].match(CRE); return (base(m[1], m[2]) + 12) % 12 };
 function tchord(c, n) { return c.split("/").map((p, i) => { const m = p.match(CRE); if (!m || (i > 0 && m[3])) return p; return NM[(base(m[1], m[2]) + n + 24) % 12] + m[3] }).join("/") }
 // akord se zobrazí přesně nad místem, kam je v textu napsán: levý okraj akordu = začátek textu hned za [závorkou]
-const chords = (h, n) => h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => `<span class="cw"><span>${b || "\u00a0"}</span><span class="cc">${n ? tchord(c, n) : c}</span></span>`);
+const chords = (h, n) => h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => `<span class="cw"><span>${b || "\u00a0"}</span><span class="cc" data-chord="${n ? tchord(c, n) : c}">${n ? tchord(c, n) : c}</span></span>`);
 const secLabel = k => { const m = k.match(/^V(\d+)$/i); return m ? m[1] + ". sloka" : /^REF$/i.test(k) ? "Refrén" : /^BRIDGE$/i.test(k) ? "Bridge" : /^CODA$/i.test(k) ? "Coda" : k };
 function songHTML(t, n) { let o = ""; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*\{([^}]+)\}\s*$/); o += m ? `<span class="sec">${esc(secLabel(m[1].trim()))}</span>` : chords(esc(l), n) + "\n" } return o }
 function expand(t) {
@@ -218,11 +218,370 @@ async function songAct(t) {
     }
 }
 document.addEventListener("click", e => {
-    if (S.pop && !e.target.closest(".pop,[data-s=tk]")) { S.pop = false; const q = document.querySelector(".pop"); if (q) q.remove() } const t = e.target.closest("[data-s],#fs,#th"); if (!t) return;
+    // close chord diagram popup on outside click
+    if (document.querySelector(".cdpop") && !e.target.closest(".cdpop,.cc")) closeChordPop();
+    if (S.pop && !e.target.closest(".pop,[data-s=tk]")) { S.pop = false; const q = document.querySelector(".pop"); if (q) q.remove() }
+    // chord label click → show diagram popup
+    if (e.target.closest(".cc")) { const cc = e.target.closest(".cc"); openChordPop(cc, cc.dataset.chord); return; }
+    const t = e.target.closest("[data-s],#fs,#th"); if (!t) return;
     if (t.dataset.s) songAct(t);
     else if (t.id === "fs") { const r = document.documentElement, v = parseInt(getComputedStyle(r).getPropertyValue("--fs")); r.style.setProperty("--fs", (v >= 26 ? 16 : v + 2) + "px") }
     else if (t.id === "th") { const r = document.documentElement, d = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme:dark)").matches; const next = d ? "light" : "dark"; r.dataset.theme = next; localStorage.setItem("theme", next) }
 });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeChordPop() });
+
+// ---- Chord diagram popup ----
+// Instrument tab preference
+let cdTab = ls("cdTab") || "guitar";
+
+// Chord database: [frets per string (low→high), fingers (0=open,-1=mute)]
+// Guitar: 6 strings E A D G B e (low to high)
+// Ukulele: 4 strings G C E A
+const GUITAR_CHORDS = {
+    "C": { f: ["x", 3, 2, 0, 1, 0], b: 0 },
+    "C#": { f: ["x", 4, 3, 1, 2, 1], b: 0 },
+    "Db": { f: ["x", 4, 3, 1, 2, 1], b: 0 },
+    "D": { f: ["x", "x", 0, 2, 3, 2], b: 0 },
+    "D#": { f: ["x", "x", 1, 3, 4, 3], b: 0 },
+    "Eb": { f: ["x", "x", 1, 3, 4, 3], b: 0 },
+    "E": { f: [0, 2, 2, 1, 0, 0], b: 0 },
+    "F": { f: [1, 1, 2, 3, 3, 1], b: 1 },
+    "F#": { f: [2, 2, 3, 4, 4, 2], b: 2 },
+    "Gb": { f: [2, 2, 3, 4, 4, 2], b: 2 },
+    "G": { f: [3, 2, 0, 0, 0, 3], b: 0 },
+    "G#": { f: [4, 3, 1, 1, 1, 4], b: 0 },
+    "Ab": { f: [4, 3, 1, 1, 1, 4], b: 0 },
+    "A": { f: ["x", 0, 2, 2, 2, 0], b: 0 },
+    "B": { f: ["x", 2, 4, 4, 4, 2], b: 0 },
+    "H": { f: ["x", 2, 4, 4, 4, 2], b: 0 },
+    "A#": { f: [1, 1, 3, 3, 3, 1], b: 1 },
+    "Bb": { f: [1, 1, 3, 3, 3, 1], b: 1 },
+    "Cm": { f: ["x", 3, 5, 5, 4, 3], b: 3 },
+    "C#m": { f: ["x", 4, 6, 6, 5, 4], b: 4 },
+    "Dbm": { f: ["x", 4, 6, 6, 5, 4], b: 4 },
+    "Dm": { f: ["x", "x", 0, 2, 3, 1], b: 0 },
+    "D#m": { f: ["x", "x", 1, 3, 4, 2], b: 0 },
+    "Ebm": { f: ["x", "x", 1, 3, 4, 2], b: 0 },
+    "Em": { f: [0, 2, 2, 0, 0, 0], b: 0 },
+    "Fm": { f: [1, 3, 3, 1, 1, 1], b: 1 },
+    "F#m": { f: [2, 4, 4, 2, 2, 2], b: 2 },
+    "Gbm": { f: [2, 4, 4, 2, 2, 2], b: 2 },
+    "Gm": { f: [3, 5, 5, 3, 3, 3], b: 3 },
+    "G#m": { f: [4, 6, 6, 4, 4, 4], b: 4 },
+    "Abm": { f: [4, 6, 6, 4, 4, 4], b: 4 },
+    "Am": { f: ["x", 0, 2, 2, 1, 0], b: 0 },
+    "A#m": { f: [1, 3, 3, 2, 1, 1], b: 1 },
+    "Bbm": { f: [1, 3, 3, 2, 1, 1], b: 1 },
+    "Bm": { f: ["x", 2, 4, 4, 3, 2], b: 2 },
+    "Hm": { f: ["x", 2, 4, 4, 3, 2], b: 2 },
+    "C7": { f: ["x", 3, 2, 3, 1, 0], b: 0 },
+    "D7": { f: ["x", "x", 0, 2, 1, 2], b: 0 },
+    "E7": { f: [0, 2, 0, 1, 0, 0], b: 0 },
+    "F7": { f: [1, 1, 2, 1, 3, 1], b: 1 },
+    "G7": { f: [3, 2, 0, 0, 0, 1], b: 0 },
+    "A7": { f: ["x", 0, 2, 0, 2, 0], b: 0 },
+    "B7": { f: ["x", 2, 1, 2, 0, 2], b: 0 },
+    "H7": { f: ["x", 2, 1, 2, 0, 2], b: 0 },
+    "Cmaj7": { f: ["x", 3, 2, 0, 0, 0], b: 0 },
+    "Dmaj7": { f: ["x", "x", 0, 2, 2, 2], b: 0 },
+    "Emaj7": { f: [0, 2, 2, 1, 0, 0], b: 0 },
+    "Fmaj7": { f: ["x", "x", 3, 2, 1, 0], b: 0 },
+    "Gmaj7": { f: [3, 2, 0, 0, 0, 2], b: 0 },
+    "Amaj7": { f: ["x", 0, 2, 1, 2, 0], b: 0 },
+    "Bmaj7": { f: ["x", 2, 4, 3, 4, 2], b: 0 },
+    "Hmaj7": { f: ["x", 2, 4, 3, 4, 2], b: 0 },
+    "Cm7": { f: ["x", 3, 5, 3, 4, 3], b: 3 },
+    "Dm7": { f: ["x", "x", 0, 2, 1, 1], b: 0 },
+    "Em7": { f: [0, 2, 0, 0, 0, 0], b: 0 },
+    "Fm7": { f: [1, 3, 1, 1, 1, 1], b: 1 },
+    "Gm7": { f: [3, 5, 3, 3, 3, 3], b: 3 },
+    "Am7": { f: ["x", 0, 2, 0, 1, 0], b: 0 },
+    "Bm7": { f: ["x", 2, 4, 2, 3, 2], b: 2 },
+    "Hm7": { f: ["x", 2, 4, 2, 3, 2], b: 2 },
+    "Csus4": { f: ["x", 3, 3, 0, 1, 1], b: 0 },
+    "Dsus4": { f: ["x", "x", 0, 2, 3, 3], b: 0 },
+    "Esus4": { f: [0, 2, 2, 2, 0, 0], b: 0 },
+    "Gsus4": { f: [3, 3, 0, 0, 1, 3], b: 0 },
+    "Asus4": { f: ["x", 0, 2, 2, 3, 0], b: 0 },
+    "Csus2": { f: ["x", 3, 3, 0, 3, 3], b: 0 },
+    "Dsus2": { f: ["x", "x", 0, 2, 3, 0], b: 0 },
+    "Esus2": { f: [0, 2, 4, 4, 0, 0], b: 0 },
+    "Gsus2": { f: [3, 2, 0, 0, 3, 3], b: 0 },
+    "Asus2": { f: ["x", 0, 2, 2, 0, 0], b: 0 },
+    "Cdim": { f: ["x", 3, 4, 5, 4, "x"], b: 0 },
+    "Ddim": { f: ["x", "x", 0, 1, 0, 1], b: 0 },
+    "Edim": { f: [0, 1, 2, 3, "x", "x"], b: 0 },
+    "Fdim": { f: [1, 2, 3, 4, "x", "x"], b: 1 },
+    "Gdim": { f: [3, 4, 5, 3, "x", "x"], b: 3 },
+    "Adim": { f: ["x", 0, 1, 2, 1, "x"], b: 0 },
+    "Bdim": { f: ["x", 2, 3, 4, 3, "x"], b: 2 },
+    "Hdim": { f: ["x", 2, 3, 4, 3, "x"], b: 2 },
+    "Caug": { f: ["x", 3, 2, 1, 1, 0], b: 0 },
+    "Daug": { f: ["x", "x", 0, 3, 3, 2], b: 0 },
+    "Eaug": { f: [0, 3, 2, 1, 1, 0], b: 0 },
+    "Faug": { f: [1, 0, 3, 2, 2, 1], b: 0 },
+    "Gaug": { f: [3, 2, 1, 0, 0, 3], b: 0 },
+    "Aaug": { f: ["x", 0, 3, 2, 2, 1], b: 0 },
+    "Baug": { f: ["x", 2, 1, 0, 0, 3], b: 0 },
+    "Haug": { f: ["x", 2, 1, 0, 0, 3], b: 0 },
+};
+
+const UKE_CHORDS = {
+    "C": { f: [0, 0, 0, 3], b: 0 },
+    "C#": { f: [1, 1, 1, 4], b: 0 },
+    "Db": { f: [1, 1, 1, 4], b: 0 },
+    "D": { f: [2, 2, 2, 0], b: 0 },
+    "D#": { f: [3, 3, 3, 1], b: 0 },
+    "Eb": { f: [3, 3, 3, 1], b: 0 },
+    "E": { f: [4, 4, 4, 2], b: 0 },
+    "F": { f: [2, 0, 1, 0], b: 0 },
+    "F#": { f: [3, 1, 2, 1], b: 0 },
+    "Gb": { f: [3, 1, 2, 1], b: 0 },
+    "G": { f: [0, 2, 3, 2], b: 0 },
+    "G#": { f: [5, 3, 4, 3], b: 3 },
+    "Ab": { f: [5, 3, 4, 3], b: 3 },
+    "A": { f: [2, 1, 0, 0], b: 0 },
+    "B": { f: [4, 3, 2, 2], b: 0 },
+    "H": { f: [4, 3, 2, 2], b: 0 },
+    "A#": { f: [3, 2, 1, 1], b: 0 },
+    "Bb": { f: [3, 2, 1, 1], b: 0 },
+    "Cm": { f: [0, 3, 3, 3], b: 0 },
+    "C#m": { f: [1, 1, 0, 4], b: 0 },
+    "Dbm": { f: [1, 1, 0, 4], b: 0 },
+    "Dm": { f: [2, 2, 1, 0], b: 0 },
+    "D#m": { f: [3, 3, 2, 1], b: 0 },
+    "Ebm": { f: [3, 3, 2, 1], b: 0 },
+    "Em": { f: [0, 4, 3, 2], b: 0 },
+    "Fm": { f: [1, 0, 1, 3], b: 0 },
+    "F#m": { f: [2, 1, 2, 0], b: 0 },
+    "Gbm": { f: [2, 1, 2, 0], b: 0 },
+    "Gm": { f: [0, 2, 3, 1], b: 0 },
+    "G#m": { f: [4, 3, 4, 2], b: 0 },
+    "Abm": { f: [4, 3, 4, 2], b: 0 },
+    "Am": { f: [2, 0, 0, 0], b: 0 },
+    "A#m": { f: [3, 1, 1, 1], b: 0 },
+    "Bbm": { f: [3, 1, 1, 1], b: 0 },
+    "Bm": { f: [4, 2, 2, 2], b: 0 },
+    "Hm": { f: [4, 2, 2, 2], b: 0 },
+    "C7": { f: [0, 0, 0, 1], b: 0 },
+    "D7": { f: [2, 2, 2, 3], b: 0 },
+    "E7": { f: [1, 2, 0, 2], b: 0 },
+    "F7": { f: [2, 3, 1, 0], b: 0 },
+    "G7": { f: [0, 2, 1, 2], b: 0 },
+    "A7": { f: [0, 1, 0, 0], b: 0 },
+    "B7": { f: [2, 3, 2, 2], b: 0 },
+    "H7": { f: [2, 3, 2, 2], b: 0 },
+    "Cmaj7": { f: [0, 0, 0, 2], b: 0 },
+    "Dmaj7": { f: [2, 2, 2, 4], b: 0 },
+    "Emaj7": { f: [1, 3, 0, 2], b: 0 },
+    "Fmaj7": { f: [2, 4, 1, 0], b: 0 },
+    "Gmaj7": { f: [0, 2, 2, 2], b: 0 },
+    "Amaj7": { f: [1, 1, 0, 0], b: 0 },
+    "Bmaj7": { f: [3, 3, 2, 2], b: 0 },
+    "Hmaj7": { f: [3, 3, 2, 2], b: 0 },
+    "Cm7": { f: [0, 3, 3, 3], b: 0 },
+    "Dm7": { f: [2, 2, 1, 3], b: 0 },
+    "Em7": { f: [0, 2, 0, 2], b: 0 },
+    "Fm7": { f: [1, 3, 1, 3], b: 0 },
+    "Gm7": { f: [0, 2, 1, 1], b: 0 },
+    "Am7": { f: [0, 0, 0, 0], b: 0 },
+    "Bm7": { f: [2, 2, 2, 2], b: 0 },
+    "Hm7": { f: [2, 2, 2, 2], b: 0 },
+    "Csus4": { f: [0, 0, 1, 3], b: 0 },
+    "Dsus4": { f: [0, 2, 3, 0], b: 0 },
+    "Gsus4": { f: [0, 2, 3, 3], b: 0 },
+    "Asus4": { f: [2, 2, 0, 0], b: 0 },
+    "Csus2": { f: [0, 2, 3, 3], b: 0 },
+    "Dsus2": { f: [2, 2, 2, 5], b: 0 },
+    "Cdim": { f: [2, 3, 2, 3], b: 0 },
+    "Ddim": { f: [1, 2, 1, 2], b: 0 },
+    "Edim": { f: [0, 1, 0, 1], b: 0 },
+    "Fdim": { f: [1, 0, 1, 2], b: 0 },
+    "Gdim": { f: [0, 1, 3, 1], b: 0 },
+    "Adim": { f: [2, 3, 2, 0], b: 0 },
+    "Bdim": { f: [3, 1, 0, 1], b: 0 },
+    "Hdim": { f: [3, 1, 0, 1], b: 0 },
+    "Caug": { f: [1, 0, 0, 3], b: 0 },
+    "Daug": { f: [3, 2, 2, 1], b: 0 },
+    "Eaug": { f: [1, 0, 0, 3], b: 0 },
+    "Faug": { f: [2, 1, 1, 0], b: 0 },
+    "Gaug": { f: [0, 3, 3, 2], b: 0 },
+    "Aaug": { f: [2, 1, 1, 4], b: 0 },
+    "Baug": { f: [0, 3, 3, 2], b: 0 },
+    "Haug": { f: [0, 3, 3, 2], b: 0 },
+};
+
+// Note indices for chords (semitones from C)
+const CHORD_NOTES = {
+    "": [0, 4, 7],          // major
+    "m": [0, 3, 7],         // minor
+    "mi": [0, 3, 7],
+    "min": [0, 3, 7],
+    "M": [0, 4, 7],
+    "7": [0, 4, 7, 10],
+    "m7": [0, 3, 7, 10],
+    "maj7": [0, 4, 7, 11],
+    "sus4": [0, 5, 7],
+    "sus2": [0, 2, 7],
+    "dim": [0, 3, 6],
+    "aug": [0, 4, 8],
+    "add9": [0, 4, 7, 14],
+    "6": [0, 4, 7, 9],
+    "m6": [0, 3, 7, 9],
+    "9": [0, 4, 7, 10, 14],
+    "m9": [0, 3, 7, 10, 14],
+    "11": [0, 4, 7, 10, 14, 17],
+    "13": [0, 4, 7, 10, 14, 17, 21],
+};
+
+function chordNotes(chord) {
+    // parse root + suffix
+    const m = chord.split("/")[0].match(/^([A-H][#b]?)(.*)$/);
+    if (!m) return [];
+    const root = m[1], suffix = m[2] || "";
+    const rootN = PN[root[0]];
+    let rootPc = rootN + (root[1] === "#" ? 1 : root[1] === "b" ? -1 : 0);
+    if (root[0] === "B") rootPc = 10 + (root[1] === "#" ? 1 : 0);
+    rootPc = ((rootPc % 12) + 12) % 12;
+    const intervals = CHORD_NOTES[suffix] || CHORD_NOTES[""];
+    return intervals.map(i => ((rootPc + i) % 12 + 12) % 12);
+}
+
+function chordKey(chord) {
+    // return chord key for lookup (strip bass note)
+    return chord.split("/")[0];
+}
+
+// Render fretboard SVG (guitar: 6 strings, ukulele: 4 strings)
+function fretboardSVG(data, stringCount) {
+    if (!data) return `<div class="cdno">Akord nenalezen</div>`;
+    const { f, b } = data;
+    const frets = f.map(x => x === "x" ? -1 : x);
+    const nonMuted = frets.filter(x => x > 0);
+    const maxFret = nonMuted.length ? Math.max(...nonMuted) : 4;
+    const minFret = nonMuted.length ? Math.min(...nonMuted) : 1;
+    const base = b || (minFret > 1 ? minFret : 0);
+    const showFrets = 4; // frets to display
+    const startFret = base > 0 ? base : 1;
+
+    const sw = 34, sh = 36; // string spacing, fret spacing
+    const pw = 14, ph = 20; // padding
+    const w = sw * (stringCount - 1) + pw * 2;
+    const h = sh * showFrets + ph * 2 + 22;
+    const strings = Array.from({ length: stringCount }, (_, i) => i);
+    const fretLines = Array.from({ length: showFrets + 1 }, (_, i) => i);
+
+    let dots = "";
+    frets.forEach((fr, si) => {
+        const x = pw + si * sw;
+        if (fr === -1) {
+            dots += `<text x="${x}" y="${ph - 6}" text-anchor="middle" class="cdx">×</text>`;
+        } else if (fr === 0) {
+            dots += `<circle cx="${x}" cy="${ph - 6}" r="5" class="cdo"/>`;
+        } else {
+            const relFret = fr - startFret + 1;
+            if (relFret >= 1 && relFret <= showFrets) {
+                const cy = ph + (relFret - 0.5) * sh;
+                dots += `<circle cx="${x}" cy="${cy}" r="10" class="cdd"/>`;
+            }
+        }
+    });
+
+    const nut = startFret === 1 ? `<rect x="${pw}" y="${ph}" width="${sw * (stringCount - 1)}" height="5" class="cdnut" rx="2"/>` : ``;
+    const fretLabel = base > 1 ? `<text x="${pw + sw * (stringCount - 1) + 6}" y="${ph + sh * 0.6}" class="cdfl">${base}fr</text>` : ``;
+
+    const gridLines = fretLines.map(i => `<line x1="${pw}" y1="${ph + i * sh}" x2="${pw + sw * (stringCount - 1)}" y2="${ph + i * sh}" class="cdg"/>`).join("");
+    const strLines = strings.map(i => `<line x1="${pw + i * sw}" y1="${ph}" x2="${pw + i * sw}" y2="${ph + showFrets * sh}" class="cdg"/>`).join("");
+
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" class="cdfb">
+    ${gridLines}${strLines}${nut}${dots}${fretLabel}
+  </svg>`;
+}
+
+// Render piano SVG – one octave with chord notes highlighted
+function pianoSVG(notes) {
+    const wk = [0, 2, 4, 5, 7, 9, 11]; // white key semitones (C D E F G A B)
+    const bk = [1, 3, -1, 6, 8, 10, -1]; // black key semitones (some don't exist)
+    const kw = 30, kh = 90, bw = 20, bh = 56;
+    const totalW = 7 * kw;
+    const noteSet = new Set(notes);
+
+    let wKeys = wk.map((n, i) => {
+        const active = noteSet.has(n);
+        return `<rect x="${i * kw}" y="0" width="${kw - 1}" height="${kh}" rx="3" class="cpwk${active ? " cpa" : ""}"/>`
+            + (active ? `<circle cx="${i * kw + kw / 2}" cy="${kh - 12}" r="7" class="cpd" style="fill:var(--ink)"/>` : "");
+    }).join("");
+
+    let bKeys = bk.map((n, i) => {
+        if (n === -1) return "";
+        const active = noteSet.has(n);
+        const x = (i + 1) * kw - bw / 2 - 1;
+        return `<rect x="${x}" y="0" width="${bw}" height="${bh}" rx="3" class="cpbk${active ? " cpa" : ""}"/>`
+            + (active ? `<circle cx="${x + bw / 2}" cy="${bh - 9}" r="6" class="cpd" style="fill:#fff"/>` : "");
+    }).join("");
+
+    return `<svg width="${totalW}" height="${kh}" viewBox="0 0 ${totalW} ${kh}" class="cppiano">${wKeys}${bKeys}</svg>`;
+}
+
+function openChordPop(anchor, chord) {
+    closeChordPop();
+    const key = chordKey(chord);
+    const pop = document.createElement("div");
+    pop.className = "cdpop";
+    // Clicks inside the popup must never bubble to the document handler
+    // (render() calls innerHTML= which detaches the clicked tab from DOM,
+    //  causing closest(".cdpop") to return null → popup would close itself)
+    pop.addEventListener("click", e => e.stopPropagation());
+
+    function render() {
+        const tabs = [
+            { id: "guitar", label: "Kytara" },
+            { id: "ukulele", label: "Ukulele" },
+            { id: "piano", label: "Piano" },
+        ];
+        let content = "";
+        if (cdTab === "guitar") {
+            content = fretboardSVG(GUITAR_CHORDS[key], 6);
+        } else if (cdTab === "ukulele") {
+            content = fretboardSVG(UKE_CHORDS[key], 4);
+        } else {
+            const notes = chordNotes(chord);
+            content = pianoSVG(notes);
+        }
+        pop.innerHTML = `
+      <div class="cdhead">
+        <span class="cdname">${esc(chord)}</span>
+        <button class="cdcl" aria-label="Zavřít">×</button>
+      </div>
+      <div class="cdtabs">${tabs.map(t => `<button class="cdtb${cdTab === t.id ? " cdon" : ""}" data-cdtab="${t.id}">${t.label}</button>`).join("")}</div>
+      <div class="cdcont">${content}</div>
+    `;
+        pop.querySelector(".cdcl").onclick = closeChordPop;
+        pop.querySelectorAll(".cdtb").forEach(b => b.onclick = () => {
+            cdTab = b.dataset.cdtab; ls("cdTab", cdTab); render();
+        });
+    }
+    render();
+
+    document.body.appendChild(pop);
+    // position below anchor
+    const rect = anchor.getBoundingClientRect();
+    const scrollY = window.scrollY, scrollX = window.scrollX;
+    let left = rect.left + scrollX;
+    let top = rect.bottom + scrollY + 6;
+    pop.style.visibility = "hidden";
+    pop.style.display = "block";
+    const pw = pop.offsetWidth, ph2 = pop.offsetHeight;
+    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12 + scrollX;
+    if (left < 8 + scrollX) left = 8 + scrollX;
+    pop.style.left = left + "px";
+    pop.style.top = top + "px";
+    pop.style.visibility = "";
+}
+
+function closeChordPop() {
+    document.querySelectorAll(".cdpop").forEach(p => p.remove());
+}
 let tm; $("#q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(() => { if (S.edit) return; S.song = null; setUrl(null, true); renderSongs() }, 180) });
 (async () => { await loadSongs(); routeFromUrl(); renderSongs() })();
 
