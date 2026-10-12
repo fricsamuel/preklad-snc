@@ -1,4 +1,3 @@
-
 const $ = s => document.querySelector(s), esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const norm = s => { let o = ""; for (const c of s) { const n = c.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); o += n[0] || c } return o };
 let S = { song: null, edit: null, msg: "", tr: 0, pop: false, p0: 0, pres: false, seq: null, pl: 2 };
@@ -264,8 +263,12 @@ function aiPump() {
 async function aiRun(j) {
     try {
         const images = await Promise.all(j.files.map(f => shrink(f)));
-        const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ act: "ai", pin: ls("pin") || "", images }) });
-        const res = await r.json(); if (!res.ok) throw new Error(res.error || "chyba serveru");
+        let res;
+        for (let k = 0; ; k++) {                             // výpadek spojení nebo odpověď Cloudflare (ne od Workeru): zkus znovu, max. 3×
+            try { res = await (await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ act: "ai", pin: ls("pin") || "", images }) })).json(); break }
+            catch (e) { if (k >= 2) throw new Error("Worker neodpověděl (síť nebo limit Cloudflare)"); await new Promise(r => setTimeout(r, 2000)) }
+        }
+        if (!res.ok) throw new Error(res.error || "chyba serveru");
         drafts.push({ id: j.id, title: res.song.title || "Bez názvu", author: res.song.author || "", text: expand(res.song.text), notes: (res.via && res.via !== "Gemini" ? "Přepsal záložní model (" + res.via + "), zkontroluj pozorně. " : "") + (res.notes || "") });
         saveDrafts(); jobs = jobs.filter(x => x !== j);
         toast("AI dokončila: " + (res.song.title || j.name) + (res.via && res.via !== "Gemini" ? " (záložní model: " + res.via + ")" : ""));
