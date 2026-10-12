@@ -40,13 +40,6 @@
     "slug": "staci-tvoje-ano-cz"
   },
   {
-    "id": "mv50tkvd",
-    "title": "Hoden je Beránek",
-    "author": "Petr Zíka",
-    "text": "{V1}\n[D] [D2] [Dsus4] [D] [D] [D2] [Dsus4] [D]\nHoden je Beránek, nejvyšší chvály\n[A] [G] [D] [D2] [Dsus4] [D]\nOn nás vykoupil, svou krví\n\n{REF}\nJenom [G]Ty jsi na věky [D]Král\nJenom [G]Tobě, patří [D]sláva, Pane [Asus4]náš [A]\n\n{BRIDGE}\nBudeme [G]jásat nad Tvým [D]vítězstvím,\nprapory [G]pozdvReporthnem ve [D]jménu svého [A]Boha.",
-    "slug": "hoden-je-beranek-cz"
-  },
-  {
     "id": "mv53nhwz",
     "title": "Žalm 8",
     "author": "Jakub Pípal",
@@ -87,5 +80,12 @@
     "author": "Cory Asbury, CZ text z SK textu: ESPÉ",
     "text": "{INTRO}\n[C#m] [H] [A] [E]\n\n{V1}\n1. [C#m]Dřív než viděl [H]jsem svět, zpíval [A]jsi nade mnou,\n[C#m]vždy jsi [H]byl ke mně [A]tak laskavý.\n[C#m]Dřív než dýchat [H]jsem směl, vdechl's [A]mi život svůj,\n[C#m]vždy jsi [H]byl ke mně [A]tak laskavý.\n\n{REF}\nÓ [C#m]Ty, mocná [H]věčná neko[A]nečná lásko, [E]Otce k nám\nTy [C#m]opustíš [H]stáda, nep[A]řestáváš, dřív [E]než najdeš nás.\nNedá [C#m]se koupit, [H]nedá zaslou[A]žit, stále [E]dáváš sebe víc.\nÓ [C#m]Ty, mocná [H]věčná neko[A]nečná lásko, [E]Otce k nám\n\n[C#m] [H] [A] [E]\n\n{V2}\n2. [C#m]Dřív než tvým [H]jsem byl, o mně jsi [A]zápasil\n[C#m]Vždy jsi [H]byl ke mně [A]tak laskavý\n[C#m]Když slabý jsem [H]byl, ty za mne jsi [A]zaplatil.\n[C#m]Vždy jsi [H]byl ke mně [A]tak laskavý\n\n{REF}\nÓ [C#m]Ty, mocná [H]věčná neko[A]nečná lásko, [E]Otce k nám\nTy [C#m]opustíš [H]stáda, nep[A]řestáváš, dřív [E]než najdeš nás.\nNedá [C#m]se koupit, [H]nedá zaslou[A]žit, stále [E]dáváš sebe víc.\nÓ [C#m]Ty, mocná [H]věčná neko[A]nečná lásko, [E]Otce k nám\n\n[C#m] [H] [A] [E]\n\n{BRIDGE}\n/: [C#m]Není tma, co [H]neprostoupíš, vrch, [A]který nezdoláš, tak [E]nás hledáš.\nNení zeď, co nerozboříš. Lež co neodstraníš. Když nás hledáš. :/\n\n/: Není tma, co neprostoupíš, vrch, který nezdoláš, tak mne hledáš.\nNení zeď, co nerozboříš, lež co neodstraníš, když mne hledáš. :/\n\n{REF}\nÓ [C#m]Ty, mocná [H]věčná neko[A]nečná lásko, [E]Otce k nám\nTy [C#m]opustíš [H]stáda, nep[A]řestáváš, dřív [E]než najdeš nás.\nNedá [C#m]se koupit, [H]nedá zaslou[A]žit, stále [E]dáváš sebe víc.\nÓ [C#m]Ty, mocná [H]věčná neko[A]nečná lásko, [E]Otce k nám\n\n[C#m] [H] [A] [E]\n",
     "slug": "32-nekonecna-laska-cz"
+  },
+  {
+    "id": "mv50tkvd",
+    "title": "Hoden je Beránek",
+    "author": "Petr Zika",
+    "text": "{V1}\n[D] [D2] [Dsus4] [D] [D] [D2] [Dsus4] [D]\nHoden je Beránek, nejvyšší chvály\n[A] [G] [D] [D2] [Dsus4] [D]\nOn nás vykoupil, svou krví\n\n{REF}\nJenom [G]Ty jsi na věky [D]Král\nJenom [G]Tobě, patří [D]sláva, Pane [Asus4]náš [A]\n\n{BRIDGE}\nBudeme [G]jásat nad Tvým [D]vítězstvím,\nprapory [G]pozdvReporthnem ve [D]jménu svého [A]Boha.",
+    "slug": "hoden-je-beranek-cz"
   }
 ]
