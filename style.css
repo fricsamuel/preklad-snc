@@ -305,7 +305,8 @@ nav.open {
 pre.song {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    font: var(--fs)/1.6 var(--ser);
+    /* line-height 2.4 = prostor pro řádek s akordem + řádek s textem */
+    font: var(--fs)/2.4 var(--ser);
     margin: 0
 }
 
@@ -668,19 +669,23 @@ textarea.f1 {
     border-top: 1px solid var(--line);
 }
 
-/* Akordy nad textem: levý okraj akordu = místo, kam je v textu napsán */
+/* Akordy nad textem – akord je absolutně nad textem, neovlivňuje šířku spanu */
 .cw {
-    display: inline-flex;
-    flex-direction: column-reverse;
-    vertical-align: bottom
+    display: inline-block;
+    position: relative;
+    vertical-align: baseline;
+    line-height: 1;
+    /* výška = jen text pod akordem; akord přesahuje nahoru mimo flow */
 }
 
 .cc {
+    position: absolute;
+    bottom: 100%;   /* přímo nad textem v .cw */
+    left: 0;
     font: 700 .68em/1.15 var(--sans);
     color: var(--ch);
     letter-spacing: .02em;
-    padding-right: .3em;
-    white-space: pre
+    white-space: nowrap; /* akord se nikdy nezalamuje */
 }
 
 /* AI import: fronta a koncepty */
