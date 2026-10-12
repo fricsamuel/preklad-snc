@@ -167,7 +167,9 @@ ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládá
             }
             const f = firstChord(s.text), p0 = f ? pcOf(f) : 0; S.p0 = p0; const cur = ((p0 + S.tr) % 12 + 12) % 12;
             const tp = f ? `<div class="tp"><button class="btn" data-s="tm">−1</button><button class="btn" data-s="tk">${esc(tchord(f, S.tr))} ▾</button><button class="btn" data-s="tp">+1</button>${S.pop ? `<div class="pop">${NM.map((n, k) => `<button class="btn${k === cur ? " on" : ""}" data-s="key" data-k="${k}">${n}</button>`).join("")}</div>` : ""}</div>` : "";
-            m.innerHTML = `<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(s.text, S.tr)}</pre>${pr}<div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`; return
+            m.innerHTML = `<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(s.text, S.tr)}</pre>${pr}<div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;
+            fixChordCollisions();
+            return
         } S.song = null
     }
     const l = songs.filter(s => !qv || qv.split(/\s+/).every(t => norm(s.title + " " + (s.author || "") + " " + s.text).includes(t))).sort((a, b) => a.title.localeCompare(b.title, "cs"));
@@ -225,7 +227,7 @@ document.addEventListener("click", e => {
     if (e.target.closest(".cc")) { const cc = e.target.closest(".cc"); openChordPop(cc, cc.dataset.chord); return; }
     const t = e.target.closest("[data-s],#fs,#th"); if (!t) return;
     if (t.dataset.s) songAct(t);
-    else if (t.id === "fs") { const r = document.documentElement, v = parseInt(getComputedStyle(r).getPropertyValue("--fs")); r.style.setProperty("--fs", (v >= 26 ? 16 : v + 2) + "px") }
+    else if (t.id === "fs") { const r = document.documentElement, v = parseInt(getComputedStyle(r).getPropertyValue("--fs")); r.style.setProperty("--fs", (v >= 26 ? 16 : v + 2) + "px"); fixChordCollisions(); }
     else if (t.id === "th") { const r = document.documentElement, d = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme:dark)").matches; const next = d ? "light" : "dark"; r.dataset.theme = next; localStorage.setItem("theme", next) }
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeChordPop() });
@@ -582,6 +584,26 @@ function openChordPop(anchor, chord) {
 function closeChordPop() {
     document.querySelectorAll(".cdpop").forEach(p => p.remove());
 }
+function fixChordCollisions() {
+    const song = document.querySelector("pre.song");
+    if (!song) return;
+    const chords = song.querySelectorAll(".cc");
+    for (const c of chords) c.style.left = "";
+    let prev = null;
+    for (const c of chords) {
+        const r = c.getBoundingClientRect();
+        if (prev && Math.abs(r.top - prev.top) < 14 && r.left < prev.right + 5) {
+            const shift = Math.ceil(prev.right + 5 - r.left);
+            c.style.left = shift + "px";
+            prev = { top: r.top, bottom: r.bottom, left: r.left + shift, right: r.right + shift };
+        } else {
+            prev = { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+        }
+    }
+}
+window.addEventListener("resize", fixChordCollisions);
+if (document.fonts) document.fonts.ready.then(fixChordCollisions);
+
 let tm; $("#q").addEventListener("input", () => { clearTimeout(tm); tm = setTimeout(() => { if (S.edit) return; S.song = null; setUrl(null, true); renderSongs() }, 180) });
 (async () => { await loadSongs(); routeFromUrl(); renderSongs() })();
 
