@@ -110,13 +110,6 @@
     "slug": "smim-stat-cz"
   },
   {
-    "id": "mv70bqdh",
-    "title": "6. Boží láska",
-    "author": "Paul Baloche, CZ text: Josef Balada",
-    "text": "{V1}\n[G]Já chtěl bych [C]Ti dnes vyzpí[G]vat,\n[G]svůj ob[C]div, lásku co v sobě [Em]mám,\nže s [D]každým z nás se probouz[C]íš a usínáš.\n\n{REF}\n[G]Jsi Bohem, [D]který má nás rád,\n[Em]Jsi Bohem, [C]který může dát,\n[G]pro každý [D]nový den,\n[Em]víru pro [C]celou naši zem.\n\nJsi Bohem, který neváhal,\nJsi Bohem, který sám se dal,\nna kříži potupy,\ndolů z nebe k nám sestoupil.\n\n{BRIDGE}\n[G]On volá, [D]On volá, [Em]On volá [C]každého z nás. (3x)",
-    "slug": "6-bozi-laska-cz"
-  },
-  {
     "id": "mv70dtty",
     "title": "50. Větší je náš Bůh",
     "author": "Chris Tomlin, Jesse Reeves, Jonas Myrin, Matt Redman / CZ text: Jana Forsythová, David Kogut",
@@ -150,5 +143,12 @@
     "author": "I Am They / CZ text: David Kogut",
     "text": "{V1}\n[B]Králem lásky je pastýř můj.\n[Gm]Tvá dobrota je stálá,[F]\n[B]nic neschází mi, když jsem Tvůj,\n[Gm]pokoj svůj [F]mi dá[B]váš.\n[Gm]Pokoj svůj [F]mi dá[B]váš.\n\n{REF}\nTvoje [D#]láska[B],[Gm]vládne v srdci mém, [F]\n[D#]navždy [B]stá[Gm]lá, nemusím [F]se bát.\n[D#]V temném údolí [B]i v [Gm]horách vysokých [F]\n[D#]vším provede [F]mne pastýř [Gm]můj\n[D#]vším provede [F]mne pastýř [B]můj\n\n{V2}\n[B]Kde živá voda pramení\n[Gm]On duši mou rád vodí,\n[B]a k pastvinám vždy zeleným,\n[Gm]svým pokrmem [F]mne [B]sytí.\n\n{V3}\n[B]Já bloudil jsem, byl ztracený,\n[Gm]On hledal mne svou láskou\n[B]a nesl mne na ramenou,\n[Gm]a s radostí [F]vzal [B]domů.\n\n{V4}\n[B]Když půjdu smrtí ódolím,\n[Gm]já nebudu se báti.\n[B]Tvůj prut a hůľ mne podrží\n[Gm]a na cestu [F]mne [B]vrátí.\n\n{V5}\n[B]Po všechen ďas a délku dní,\n[Gm]Tvá dobrota mi žehná.\n[B]V Tvém domě zpívám s vděčností,\n[Gm]má radost [F]věčně [B]trvá,\n[Gm]má radost [F]věčně [B]trvá.\n\n{REF}\nTvoje [D#]láska[B],[Gm]vládne v srdci mém, [F]\n[D#]navždy [B]stá[Gm]lá, nemusím [F]se bát.\n[D#]V temném údolí [B]i v [Gm]horách vysokých [F]\n[D#]vším provede [F]mne pastýř [Gm]můj\n[D#]vším provede [F]mne pastýř [B]můj\n\n{BRIDGE}\n[D#]/: Ó [F]- ó [Gm]- ó, [F/A]hale[B]luja, halelu[F]ja! :/\n",
     "slug": "24-kral-lasky-cz"
+  },
+  {
+    "id": "mv70bqdh",
+    "title": "Boží láska",
+    "author": "Paul Baloche, CZ text: Josef Balada",
+    "text": "{V1}\n[G]Já chtěl bych [C]Ti dnes vyzpí[G]vat,\n[G]svůj ob[C]div, lásku co v sobě [Em]mám,\nže s [D]každým z nás se probouz[C]íš a usínáš.\n\n{REF}\n[G]Jsi Bohem, [D]který má nás rád,\n[Em]Jsi Bohem, [C]který může dát,\n[G]pro každý [D]nový den,\n[Em]víru pro [C]celou naši zem.\n\nJsi Bohem, který neváhal,\nJsi Bohem, který sám se dal,\nna kříži potupy,\ndolů z nebe k nám sestoupil.\n\n{BRIDGE}\n[G]On volá, [D]On volá, [Em]On volá [C]každého z nás. (3x)",
+    "slug": "6-bozi-laska-cz"
   }
 ]
