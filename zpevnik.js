@@ -601,7 +601,17 @@ function openChordPop(anchor, chord) {
 
     // ---- arrow shift logic ----
     // Uses `pos` object (mutable) so repeated presses chain correctly.
-    async function shiftChord(dir) {
+    // Save is debounced: UI updates immediately, store() fires 500ms after last click.
+    let saveTimer = null, pendingSave = null;
+
+    async function flushSave() {
+        if (!pendingSave) return;
+        const { s, nt, old } = pendingSave; pendingSave = null;
+        try { const msg = await store("save", { ...s, text: nt }); mvToast("Akord přesunut. " + msg) }
+        catch (err) { const s2 = songs.find(x => x.id === s.id); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
+    }
+
+    function shiftChord(dir) {
         if (!pos) return;
         const s = songs.find(x => x.id === S.song); if (!s) return;
         const lines = s.text.replace(/\r/g, "").split("\n");
@@ -633,8 +643,8 @@ function openChordPop(anchor, chord) {
             lines[targetLi] = lineBuild(tp, tcs);
             pos.li = targetLi; pos.ki = ins;
         }
-        const nt = lines.join("\n"), old = s.text;
-        if (nt === old) return;
+        const nt = lines.join("\n"), old = pendingSave ? pendingSave.old : s.text;
+        if (nt === s.text) return;
         s.text = nt; renderSongs();
         // update popup position to follow the moved chord
         const newAnchor = document.querySelector(`.ln[data-l="${pos.li}"] .cw[data-k="${pos.ki}"] .cc`);
@@ -643,8 +653,10 @@ function openChordPop(anchor, chord) {
             pop.style.left = (Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 12, r2.left)) + window.scrollX) + "px";
             pop.style.top = (r2.bottom + window.scrollY + 6) + "px";
         }
-        try { const msg = await store("save", { ...s, text: nt }); mvToast("Akord přesunut. " + msg) }
-        catch (err) { const s2 = songs.find(x => x.id === s.id); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
+        // debounced save — keep original `old` so rollback goes all the way back
+        pendingSave = { s, nt, old };
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(flushSave, 500);
     }
 }
 
