@@ -96,13 +96,6 @@
     "slug": "si-cesta-cz"
   },
   {
-    "id": "mv6ztna5",
-    "title": "Pane, príď... (Endless Hallelujah)",
-    "author": "Matt Redman, Jonas Myrin, Chris Tomlin, Tim Wanstall / SK text: Tomáš Turčan",
-    "text": "{V1}\n[E]Vidím mesto nádherné, [C#m]spolu v ňom raz budeme,\n[A]v jeho strede skvie sa [H]večný trón.\n[E]Novú pieseň spasených, [C#m]akú svet nikdy nezažil,\n[A]jedným hlasom k Tebe [H]vyšleme...\n\n{REF}\n[A]Tebe [H]chválu [C#m]vzdá[E/G#]me,\nkeď [A]úplne [H]pochopíme, [E]kým Ty [H/D#]si.\n[A]Pred Tebou [H]stáť [E/G#]raz bude[C#m]me,\ndov[F#m]tedy chceme [H]volať: „Pane, [E]príď...“\n\n{V2}\n[E]Tvoju krásu uvidím, [C#m]hĺbku lásky pocítim,\n[A]zistím, čo ťa stálo mať [H]ma späť.\n[E]Navždy vďačnosť zavládne [C#m]v srdci, kde už nie je hriech,\n[A]všetko staré bude [H]zmenené...\n\n{BRIDGE}\n[C#m]Odnímeš [G#m]smrti tieň, [A]nebude viac [H]žiaľ, sl[E]zavé údolie.\nNaj[C#m]väčší [G#m]bude dar [A]to, že každý deň [Am6]nám dáš vidieť Tvoju tvár. [E] [C#m] [A] [H]\n\n{BRIDGE}\n[C#m]Ooo [A]– ooo, [E]ooo [H]– ooo, [C#m]nebo [A]spieva [E]hale[H]luja,\n[F#m]Tebe, [A]Kráľ náš: [F#m]Hale [A]– luuu [E]– ja...",
-    "slug": "pane-prid-endless-hallelujah-cz"
-  },
-  {
     "id": "mv70346t",
     "title": "Smím stát",
     "author": "Joel Houston",
@@ -150,5 +143,12 @@
     "author": "Chris Tomlin, Jesse Reeves, Jonas Myrin, Matt Redman / CZ text: Jana Forsythová, David Kogut",
     "text": "{V1}\n[Em7]Vodu ve [C]víno změ[G]nils, [Em7]slepé oči [C]uzdra[G]vil.\nNení [Am7]žádný jako Ty, Bůh [Dsus4]náš. [D]\n[Em7]Do temnoty [C]záříš [G]nám, [Em]z popela [C]nás pozve[G]dáš.\nNení [Am7]žádný jako Ty, Bůh [Dsus4]náš. [D]\n[Em7]V blízkosti [C]Tvé měníš [G]nás, [Em7]čistotu [C]do srdce [G]dáš.\nNení [Am7]žádný jako Ty, Bůh [Dsus4]náš. [D]\n\n{REF}\n[Em]Větší je náš Bůh, [C]nadevše silný,\n[G]Větší jsi, náš Bože, [D]nežli kdo jiný.\n[Em]Přítel jsi věrný s [C]obrovskou mocí,\n[G]náš Bůh, [D]náš Bůh.\n\n{V2}\n[Em7]V těžkostech [C]nám [G]pomáháš, [Em7]už vím, [C][G]nejsem na to sám.\nAno, [Am7]jde to, když Ty jsi [Dsus4]Bůh [D]náš.\n[Em7]U Tebe vše [C]je [G]možné a [Em]bez Tebe [C]smutné, [G]prázdné.\nAno, [Am7]jde to, když Ty jsi [Dsus4]Bůh [D]náš.\n\n{BRIDGE}\n[Em]A když je náš Bůh s námi, [C]kdo nám pak může bránit?\n[G]A když je náš Bůh s námi, [D]co může proti být?\n[Em]A když je náš Bůh s námi, [C]kdo může stát proti nám?\n[G]A když je náš Bůh s námi, [D]co může zastavit nás? [Em] [C] [G] [D] [Em] [C] [G] [D]",
     "slug": "50-vetsi-je-nas-buh-cz"
+  },
+  {
+    "id": "mv6ztna5",
+    "title": "Pane, príď... (Endless Hallelujah)",
+    "author": "Matt Redman, Jonas Myrin, Chris Tomlin, Tim Wanstall / SK text: Tomáš Turčan",
+    "text": "{V1}\n[E]Vidím mesto nádherné, [C#m]spolu v ňom raz budeme,\n[A]v jeho strede skvie sa [H]večný trón.\n[E]Novú pieseň spasených, [C#m]akú svet nikdy nezažil,\n[A]jedným hlasom k Tebe [H]vyšleme...\n\n{REF}\n[A]Tebe [H]chválu [C#m]vzdá[E/G#]me,\nkeď [A]úplne [H]pochopíme, [E]kým Ty [H/D#]si.\n[A]Pred Tebou [H]stáť [E/G#]raz bude[C#m]me,\ndov[F#m]tedy chceme [H]volať: „Pane, [E]príď...“\n\n{V2}\n[E]Tvoju krásu uvidím, [C#m]hĺbku lásky pocítim,\n[A]zistím, čo ťa stálo mať [H]ma späť.\n[E]Navždy vďačnosť zavládne [C#m]v srdci, kde už nie je hriech,\n[A]všetko staré bude [H]zmenené...\n\n{BRIDGE}\n[C#m]Odnímeš [G#m]smrti tieň, [A]nebude viac [H]žiaľ, sl[E]zavé údolie.\nNaj[C#m]väčší [G#m]bude dar [A]to, že každý deň [Am6]nám dáš vidieť Tvoju tvár. [E] [C#m] [A] [H]\n\n{BRIDGE}\n[C#m]Ooo [A]– ooo, [E]ooo [H]– ooo, [C#m]nebo [A]spieva\n[F#m]hale[A]luja,\n\n{REF}\n[A]Tebe [H]chválu [C#m]vzdá[E/G#]me,\nkeď [A]úplne [H]pochopíme, [E]kým Ty [H/D#]si.\n[A]Pred Tebou [H]stáť [E/G#]raz bude[C#m]me,\ndov[F#m]tedy chceme [H]volať: „Pane, [E]príď...“\n",
+    "slug": "pane-prid-endless-hallelujah-cz"
   }
 ]
