@@ -533,7 +533,11 @@ function pianoSVG(notes) {
 
 function openChordPop(anchor, chord) {
     closeChordPop();
+    if (S.edit || S.pres) return;
     const key = chordKey(chord);
+    const cw = anchor.parentElement; // .cw element with data-l, data-k, data-c
+    // mutable position tracker so arrow presses can chain without reopening
+    const pos = (cw && cw.dataset.l !== undefined) ? { li: +cw.dataset.l, ki: +cw.dataset.k, c: cw.dataset.c } : null;
     const pop = document.createElement("div");
     pop.className = "cdpop";
     // Clicks inside the popup must never bubble to the document handler
@@ -562,12 +566,21 @@ function openChordPop(anchor, chord) {
         <button class="cdcl" aria-label="Zavřít">×</button>
       </div>
       <div class="cdtabs">${tabs.map(t => `<button class="cdtb${cdTab === t.id ? " cdon" : ""}" data-cdtab="${t.id}">${t.label}</button>`).join("")}</div>
+      ${pos ? `<div class="cdmove">
+        <button class="cdmv" data-dir="up"    aria-label="Řádek nahoru">↑</button>
+        <button class="cdmv" data-dir="left"  aria-label="Posunout doleva">←</button>
+        <button class="cdmv" data-dir="right" aria-label="Posunout doprava">→</button>
+        <button class="cdmv" data-dir="down"  aria-label="Řádek dolů">↓</button>
+      </div>` : ""}
       <div class="cdcont">${content}</div>
     `;
         pop.querySelector(".cdcl").onclick = closeChordPop;
         pop.querySelectorAll(".cdtb").forEach(b => b.onclick = () => {
             cdTab = b.dataset.cdtab; ls("cdTab", cdTab); render();
         });
+        if (pos) {
+            pop.querySelectorAll(".cdmv").forEach(b => b.onclick = () => shiftChord(b.dataset.dir));
+        }
     }
     render();
 
@@ -585,6 +598,54 @@ function openChordPop(anchor, chord) {
     pop.style.left = left + "px";
     pop.style.top = top + "px";
     pop.style.visibility = "";
+
+    // ---- arrow shift logic ----
+    // Uses `pos` object (mutable) so repeated presses chain correctly.
+    async function shiftChord(dir) {
+        if (!pos) return;
+        const s = songs.find(x => x.id === S.song); if (!s) return;
+        const lines = s.text.replace(/\r/g, "").split("\n");
+        const { plain, cs } = lineParts(lines[pos.li] || "");
+        if (!cs[pos.ki] || cs[pos.ki].c !== pos.c) {
+            mvToast("Akord nejde přesunout (text se změnil)."); return;
+        }
+        if (dir === "left" || dir === "right") {
+            const delta = dir === "left" ? -1 : 1;
+            const newP = Math.max(0, Math.min(plain.length, cs[pos.ki].p + delta));
+            if (newP === cs[pos.ki].p) return; // already at edge
+            const result = moveChord(lines[pos.li], pos.ki, newP);
+            lines[pos.li] = result.raw;
+            pos.ki = result.k;
+        } else {
+            // up/down: move chord to adjacent line
+            const targetLi = dir === "up" ? pos.li - 1 : pos.li + 1;
+            if (targetLi < 0 || targetLi >= lines.length) return;
+            const curP = cs[pos.ki].p;
+            // remove chord from current line
+            const csOrig = cs.slice(); csOrig.splice(pos.ki, 1);
+            lines[pos.li] = lineBuild(plain, csOrig);
+            // insert chord into target line at same position (clamped)
+            const { plain: tp, cs: tcs } = lineParts(lines[targetLi]);
+            const newP = Math.max(0, Math.min(tp.length, curP));
+            const chordObj = { c: pos.c, p: newP };
+            let ins = tcs.findIndex(y => y.p > newP); if (ins < 0) ins = tcs.length;
+            tcs.splice(ins, 0, chordObj);
+            lines[targetLi] = lineBuild(tp, tcs);
+            pos.li = targetLi; pos.ki = ins;
+        }
+        const nt = lines.join("\n"), old = s.text;
+        if (nt === old) return;
+        s.text = nt; renderSongs();
+        // update popup position to follow the moved chord
+        const newAnchor = document.querySelector(`.ln[data-l="${pos.li}"] .cw[data-k="${pos.ki}"] .cc`);
+        if (newAnchor) {
+            const r2 = newAnchor.getBoundingClientRect();
+            pop.style.left = (Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 12, r2.left)) + window.scrollX) + "px";
+            pop.style.top = (r2.bottom + window.scrollY + 6) + "px";
+        }
+        try { const msg = await store("save", { ...s, text: nt }); mvToast("Akord přesunut. " + msg) }
+        catch (err) { const s2 = songs.find(x => x.id === s.id); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
+    }
 }
 
 function closeChordPop() {

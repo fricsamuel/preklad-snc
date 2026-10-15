@@ -797,6 +797,40 @@ textarea.f1 {
     border-color: var(--ch);
 }
 
+/* Chord position arrows */
+.cdmove {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+}
+.cdmv {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 36px;
+    height: 32px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s, color .12s, border-color .12s, transform .1s;
+    user-select: none;
+}
+.cdmv:hover {
+    background: var(--ch);
+    color: #fff;
+    border-color: var(--ch);
+}
+.cdmv:active {
+    transform: scale(.9);
+}
+
 .cdcont {
     display: flex;
     justify-content: center;
