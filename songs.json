@@ -152,17 +152,17 @@
     "slug": "zaklad-muj-cz"
   },
   {
-    "id": "mv9w2p26",
-    "title": "Jen Ty, Pane můj",
-    "author": "neznámý",
-    "text": "{V1}\n/: [Am]Mnoho je těch, [Dm]kteří kolem volají,\nv Bohu žádnou pomoc [Em]nenajdeš. :/\n\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n\n{V2}\n/: [Am]Volal jsem k Pánu svému v [Dm]úzkosti,\na [Em]on prosbu moji vyslyšel. :/\n\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n\n{V3}\n/: [Am]Ty mi dáváš spánek, novou [Dm]sílu,\nv [Em]novém dni mne znovu pozvedáš. :/\n\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n\n{V4}\n/: [Am]Nebudu se bát ani [Dm]tisíců\n[Em]těch, kdo mne pronásledují. :/\n\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n",
-    "slug": "jen-ty-pane-muj-cz"
-  },
-  {
     "id": "mv46pl0d",
     "title": "Boh tak miloval svet",
     "author": "Janka Šinková, hudba: BCC",
     "text": "{V1}\n/: [D]Boh tak miloval svet,\nže [Hm7]svojho [A]Syna [G]nám dal :/\n\n{REF}\n[G/D]Neko[D]nečná mi[Gmaj7]losť tak [G6]vzácna,\n[D/F#]ma spasila, keď [Asus4]niesol si môj hriech.\n[G/D]Bezhrani[D]čná, predivná [Gmaj7]lás[G6]ka,\n[D/F#]Ťa viedla [A]na kríž, aby [Gmaj7/9]ja som mohol [Gmaj7]žiť.\n\n{BRIDGE}\n[Hm7]Predivná [A]lás[G]ka. (4x)",
     "slug": "boh-tak-miloval-svet-cz"
+  },
+  {
+    "id": "mv9w2p26",
+    "title": "Jen Ty, Pane můj",
+    "author": "neznámý",
+    "text": "{V1}\n/: [Am]Mnoho je těch, [Dm]kteří kolem volají,\nv Bohu žádnou pomoc n[Em]enajdeš. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V2}\n/: [Am]Volal jsem k Pánu svému v [Dm]úzkosti,\na [Em]on prosbu moji vyslyšel. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V3}\n/: [Am]Ty mi dáváš spánek, novou [Dm]sílu,\nv [Em]novém dni mne znovu pozvedáš. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V4}\n/: [Am]Nebudu se bát ani [Dm]tisíců\n[Em]těch, kdo mne pronásledují. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n",
+    "slug": "jen-ty-pane-muj-cz"
   }
 ]
