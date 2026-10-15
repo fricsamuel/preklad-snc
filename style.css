@@ -775,7 +775,7 @@ textarea.f1 {
 .cdtabs {
     display: flex;
     gap: 4px;
-    padding: 8px 10px 6px;
+    padding: 8px 8px 6px;
     border-bottom: 1px solid var(--line);
     background: var(--bg);
 }
@@ -783,12 +783,14 @@ textarea.f1 {
     background: none;
     border: 1px solid transparent;
     border-radius: 8px;
-    padding: 5px 9px;
+    padding: 5px 8px;
     font: 600 12px var(--sans);
     cursor: pointer;
     color: var(--mute);
     transition: background .12s, color .12s, border-color .12s;
     white-space: nowrap;
+    flex: 1;
+    text-align: center;
 }
 .cdtb:hover { background: var(--panel); color: var(--ink); border-color: var(--line); }
 .cdtb.cdon {
@@ -797,22 +799,35 @@ textarea.f1 {
     border-color: var(--ch);
 }
 
-/* Chord position arrows */
-.cdmove {
+/* Chord move tab panel */
+.cdmv-panel {
     display: flex;
-    justify-content: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--line);
-    background: var(--bg);
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px 12px;
+    width: 100%;
+    min-width: 200px;
+}
+.cdmv-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+.cdmv-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
 }
 .cdmv {
-    background: none;
+    background: var(--bg);
     border: 1px solid var(--line);
     border-radius: 8px;
-    width: 36px;
-    height: 32px;
-    font-size: 16px;
+    width: 42px;
+    height: 36px;
+    font-size: 18px;
+    font-weight: bold;
     line-height: 1;
     cursor: pointer;
     color: var(--ink);
@@ -828,7 +843,43 @@ textarea.f1 {
     border-color: var(--ch);
 }
 .cdmv:active {
-    transform: scale(.9);
+    transform: scale(.92);
+}
+.cdmv-footer {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+}
+.cdsave-btn {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 16px;
+    font: 600 13px var(--sans);
+    cursor: pointer;
+    color: var(--ink);
+    transition: all .15s ease;
+    width: 100%;
+    max-width: 170px;
+    text-align: center;
+}
+.cdsave-btn:hover {
+    border-color: var(--acc);
+}
+.cdsave-btn.cdpending {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+.cdsave-btn.cdpending:hover {
+    background: #15803d;
+    border-color: #15803d;
+}
+.cdsave-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .cdcont {

@@ -76,6 +76,54 @@ function expand(t) {
 }
 document.addEventListener("change", e => { if (e.target.id === "sx") e.target.value = expand(e.target.value) });
 const strip = l => l.replace(/\[[^\]]*\]/g, "").replace(/\s{2,}/g, " ").trim();
+// Sync chord positions from V1 to all other verses (V2, V3, …)
+// Preserves the chord names from each verse, only moves their positions to match V1.
+function syncVersesFromV1(text) {
+    const lines = text.replace(/\r/g, "").split("\n");
+    // Parse into sections: [{header: string|null, lineIdxs: []}]
+    const secs = [];
+    for (let i = 0; i < lines.length; i++) {
+        const m = lines[i].match(/^\s*\{([^}]+)\}\s*$/);
+        if (m) secs.push({ k: m[1].trim().toUpperCase(), r: m[1].trim(), idxs: [] });
+        else if (secs.length) secs[secs.length - 1].idxs.push(i);
+    }
+    const v1 = secs.find(s => s.k === "V1");
+    if (!v1) return text; // nothing to sync
+    // For each verse Vn (n >= 2), apply chord positions from V1 line by line
+    for (const sec of secs) {
+        if (!/^V(\d+)$/.test(sec.k) || sec.k === "V1") continue;
+        const vn = sec;
+        const v1Lines = v1.idxs.map(i => lines[i]);
+        const vnLines = vn.idxs.map(i => lines[i]);
+        let v1li = 0; // index into non-empty v1 lines
+        let vnli = 0; // index into non-empty vn lines
+        // align non-empty lines between v1 and vn
+        const v1content = v1Lines.map((l, i) => ({ l, i })).filter(x => x.l.trim());
+        const vncontent = vnLines.map((l, i) => ({ l, i })).filter(x => x.l.trim());
+        for (let j = 0; j < Math.min(v1content.length, vncontent.length); j++) {
+            const src = v1content[j].l; // V1 line with chords
+            const dst = vncontent[j];   // Vn line
+            const { plain: srcPlain, cs: srcCs } = lineParts(src);
+            const { plain: dstPlain, cs: dstCs } = lineParts(vnLines[dst.i]);
+            if (!srcCs.length) continue; // V1 line has no chords — leave Vn as-is
+            // Re-position each chord in Vn to match corresponding V1 chord position
+            // Use relative position (fraction of line length) if lengths differ
+            const newCs = dstCs.map((ch, ci) => {
+                if (ci >= srcCs.length) return ch; // no corresponding V1 chord
+                const srcPos = srcCs[ci].p;
+                // scale position if plain text lengths differ
+                const scaled = dstPlain.length > 0 && srcPlain.length > 0
+                    ? Math.round(srcPos * dstPlain.length / srcPlain.length)
+                    : srcPos;
+                return { ...ch, p: Math.max(0, Math.min(dstPlain.length, scaled)) };
+            });
+            // Re-sort by position
+            newCs.sort((a, b) => a.p - b.p);
+            lines[vn.idxs[dst.i]] = lineBuild(dstPlain, newCs);
+        }
+    }
+    return lines.join("\n");
+}
 function parts(t) {
     const out = []; let cur = null;
     for (const l of expand(t).split("\n")) {
@@ -155,7 +203,7 @@ async function renderSongs() {
 <div class="edw"><textarea class="f1" id="sx" placeholder="Text písničky – akordy piš do hranatých závorek, např. Jsi Kr[G]al">${esc(s.text)}</textarea>${edBar()}</div>
 <p class="info">Akordy: Jsi Kr[G]al · Části na samostatný řádek: {V1}, {V2}, {REF}. {V2} bez akordů se doplní podle {V1}, prázdné {REF} se doplní refrénem.</p>
 ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládání" value="${esc(ls("pin") || "")}">` : ""}
-<p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button></article>`; return
+<p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button>${s.id && /\{V2\}/i.test(s.text) ? ` <button class="btn" data-s="syncv" data-id="${esc(s.id)}" title="Aplikuje pozice akordů z 1. sloky na všechny ostatní sloky">Sync. sloky ze sloky 1</button>` : ""}</article>`; return
     }
     if (S.song) {
         const s = songs.find(x => x.id === S.song); if (s) {
@@ -173,6 +221,7 @@ ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládá
             }
             const f = firstChord(s.text), p0 = f ? pcOf(f) : 0; S.p0 = p0; const cur = ((p0 + S.tr) % 12 + 12) % 12;
             const tp = f ? `<div class="tp"><button class="btn" data-s="tm">−1</button><button class="btn" data-s="tk">${esc(tchord(f, S.tr))} ▾</button><button class="btn" data-s="tp">+1</button>${S.pop ? `<div class="pop">${NM.map((n, k) => `<button class="btn${k === cur ? " on" : ""}" data-s="key" data-k="${k}">${n}</button>`).join("")}</div>` : ""}</div>` : "";
+            const hasMultiVerse = /\{V2\}/i.test(s.text);
             m.innerHTML = `<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(s.text, S.tr)}</pre>${pr}<div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;
             fixChordCollisions();
             return
@@ -217,6 +266,14 @@ async function songAct(t) {
         if (!s.title || !s.text.trim()) { $("#sm").textContent = "Vyplň název a text."; return }
         if (!s.id) s.id = Date.now().toString(36); if (!s.slug) s.slug = uniqueSlug(s.title, s.id); if (API) ls("pin", $("#sp").value); $("#sm").textContent = "Ukládám…";
         try { S.msg = await store("save", s); if (S.draft) { drafts = drafts.filter(x => x.id !== S.draft); saveDrafts(); S.draft = null } S.edit = null; S.song = s.id; S.tr = 0; S.pres = false; setUrl(songs.find(x => x.id === s.id), true); renderSongs() } catch (e) { $("#sm").textContent = "Nepodařilo se uložit: " + e.message }
+    }
+    else if (a === "syncv") {
+        const s = songs.find(x => x.id === id); if (!s) return;
+        const nt = syncVersesFromV1(s.text);
+        if (nt === s.text) { mvToast("Sloky jsou už synchronizované."); return }
+        const old = s.text; s.text = nt; renderSongs();
+        try { const msg = await store("save", { ...s, text: nt }); mvToast("Sloky synchronizovány. " + msg) }
+        catch (err) { const s2 = songs.find(x => x.id === id); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
     }
     else if (a === "del") { t.parentElement.innerHTML = (API ? `<input class="f1" id="dp" type="password" placeholder="PIN" style="max-width:180px;margin:0">` : "") + `<button class="btn ac" data-s="del2" data-id="${esc(id)}">Smazat</button><button class="btn" data-s="open" data-id="${esc(id)}">Zrušit</button>`; const d = $("#dp"); if (d) d.focus() }
     else if (a === "del2") {
@@ -531,6 +588,8 @@ function pianoSVG(notes) {
     return `<svg width="${totalW}" height="${kh}" viewBox="0 0 ${totalW} ${kh}" class="cppiano">${wKeys}${bKeys}</svg>`;
 }
 
+let activeChordPopRevert = null;
+
 function openChordPop(anchor, chord) {
     closeChordPop();
     if (S.edit || S.pres) return;
@@ -538,6 +597,21 @@ function openChordPop(anchor, chord) {
     const cw = anchor.parentElement; // .cw element with data-l, data-k, data-c
     // mutable position tracker so arrow presses can chain without reopening
     const pos = (cw && cw.dataset.l !== undefined) ? { li: +cw.dataset.l, ki: +cw.dataset.k, c: cw.dataset.c } : null;
+
+    const s = songs.find(x => x.id === S.song);
+    let initialText = s ? s.text : "";
+    let hasUnsaved = false;
+    let isSaving = false;
+
+    activeChordPopRevert = () => {
+        if (hasUnsaved && s && s.text !== initialText) {
+            s.text = initialText;
+            renderSongs();
+        }
+    };
+
+    if (cdTab === "move" && !pos) cdTab = "guitar";
+
     const pop = document.createElement("div");
     pop.className = "cdpop";
     // Clicks inside the popup must never bubble to the document handler
@@ -551,14 +625,35 @@ function openChordPop(anchor, chord) {
             { id: "ukulele", label: "Ukulele" },
             { id: "piano", label: "Piano" },
         ];
+        if (pos) {
+            tabs.push({ id: "move", label: "Posun" });
+        }
         let content = "";
         if (cdTab === "guitar") {
             content = fretboardSVG(GUITAR_CHORDS[key], 6);
         } else if (cdTab === "ukulele") {
             content = fretboardSVG(UKE_CHORDS[key], 4);
-        } else {
+        } else if (cdTab === "piano") {
             const notes = chordNotes(chord);
             content = pianoSVG(notes);
+        } else if (cdTab === "move") {
+            content = `
+              <div class="cdmv-panel">
+                <div class="cdmv-grid">
+                  <button class="cdmv cdmv-up" data-dir="up" title="Řádek nahoru" aria-label="Řádek nahoru">↑</button>
+                  <div class="cdmv-row">
+                    <button class="cdmv cdmv-left" data-dir="left" title="Posunout doleva" aria-label="Posunout doleva">←</button>
+                    <button class="cdmv cdmv-right" data-dir="right" title="Posunout doprava" aria-label="Posunout doprava">→</button>
+                  </div>
+                  <button class="cdmv cdmv-down" data-dir="down" title="Řádek dolů" aria-label="Řádek dolů">↓</button>
+                </div>
+                <div class="cdmv-footer">
+                  <button class="cdsave-btn${hasUnsaved ? " cdpending" : ""}" ${isSaving ? "disabled" : ""}>
+                    ${isSaving ? "Ukládám..." : "Uložit"}
+                  </button>
+                </div>
+              </div>
+            `;
         }
         pop.innerHTML = `
       <div class="cdhead">
@@ -566,55 +661,66 @@ function openChordPop(anchor, chord) {
         <button class="cdcl" aria-label="Zavřít">×</button>
       </div>
       <div class="cdtabs">${tabs.map(t => `<button class="cdtb${cdTab === t.id ? " cdon" : ""}" data-cdtab="${t.id}">${t.label}</button>`).join("")}</div>
-      ${pos ? `<div class="cdmove">
-        <button class="cdmv" data-dir="up"    aria-label="Řádek nahoru">↑</button>
-        <button class="cdmv" data-dir="left"  aria-label="Posunout doleva">←</button>
-        <button class="cdmv" data-dir="right" aria-label="Posunout doprava">→</button>
-        <button class="cdmv" data-dir="down"  aria-label="Řádek dolů">↓</button>
-      </div>` : ""}
       <div class="cdcont">${content}</div>
     `;
         pop.querySelector(".cdcl").onclick = closeChordPop;
         pop.querySelectorAll(".cdtb").forEach(b => b.onclick = () => {
             cdTab = b.dataset.cdtab; ls("cdTab", cdTab); render();
         });
-        if (pos) {
+        if (pos && cdTab === "move") {
             pop.querySelectorAll(".cdmv").forEach(b => b.onclick = () => shiftChord(b.dataset.dir));
+            const saveBtn = pop.querySelector(".cdsave-btn");
+            if (saveBtn) saveBtn.onclick = savePosition;
         }
     }
     render();
 
     document.body.appendChild(pop);
-    // position below anchor
-    const rect = anchor.getBoundingClientRect();
-    const scrollY = window.scrollY, scrollX = window.scrollX;
-    let left = rect.left + scrollX;
-    let top = rect.bottom + scrollY + 6;
-    pop.style.visibility = "hidden";
-    pop.style.display = "block";
-    const pw = pop.offsetWidth, ph2 = pop.offsetHeight;
-    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12 + scrollX;
-    if (left < 8 + scrollX) left = 8 + scrollX;
-    pop.style.left = left + "px";
-    pop.style.top = top + "px";
-    pop.style.visibility = "";
 
-    // ---- arrow shift logic ----
-    // Uses `pos` object (mutable) so repeated presses chain correctly.
-    // Save is debounced: UI updates immediately, store() fires 500ms after last click.
-    let saveTimer = null, pendingSave = null;
+    function updatePosition() {
+        const anchorEl = (pos ? document.querySelector(`.ln[data-l="${pos.li}"] .cw[data-k="${pos.ki}"] .cc`) : null) || anchor;
+        if (!anchorEl) return;
+        const rect = anchorEl.getBoundingClientRect();
+        const scrollY = window.scrollY, scrollX = window.scrollX;
+        let left = rect.left + scrollX;
+        let top = rect.bottom + scrollY + 6;
+        pop.style.visibility = "hidden";
+        pop.style.display = "block";
+        const pw = pop.offsetWidth;
+        if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12 + scrollX;
+        if (left < 8 + scrollX) left = 8 + scrollX;
+        pop.style.left = left + "px";
+        pop.style.top = top + "px";
+        pop.style.visibility = "";
+    }
+    updatePosition();
 
-    async function flushSave() {
-        if (!pendingSave) return;
-        const { s, nt, old } = pendingSave; pendingSave = null;
-        try { const msg = await store("save", { ...s, text: nt }); mvToast("Akord přesunut. " + msg) }
-        catch (err) { const s2 = songs.find(x => x.id === s.id); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
+    async function savePosition() {
+        if (isSaving || !s) return;
+        if (!hasUnsaved) {
+            mvToast("Žádné změny k uložení.");
+            return;
+        }
+        isSaving = true;
+        render();
+        try {
+            const msg = await store("save", { ...s, text: s.text });
+            initialText = s.text;
+            hasUnsaved = false;
+            isSaving = false;
+            mvToast("Akord uložen. " + msg);
+            render();
+        } catch (err) {
+            isSaving = false;
+            render();
+            mvToast("Nepodařilo se uložit: " + err.message);
+        }
     }
 
     function shiftChord(dir) {
         if (!pos) return;
-        const s = songs.find(x => x.id === S.song); if (!s) return;
-        const lines = s.text.replace(/\r/g, "").split("\n");
+        const curSong = songs.find(x => x.id === S.song); if (!curSong) return;
+        const lines = curSong.text.replace(/\r/g, "").split("\n");
         const { plain, cs } = lineParts(lines[pos.li] || "");
         if (!cs[pos.ki] || cs[pos.ki].c !== pos.c) {
             mvToast("Akord nejde přesunout (text se změnil)."); return;
@@ -643,24 +749,22 @@ function openChordPop(anchor, chord) {
             lines[targetLi] = lineBuild(tp, tcs);
             pos.li = targetLi; pos.ki = ins;
         }
-        const nt = lines.join("\n"), old = pendingSave ? pendingSave.old : s.text;
-        if (nt === s.text) return;
-        s.text = nt; renderSongs();
-        // update popup position to follow the moved chord
-        const newAnchor = document.querySelector(`.ln[data-l="${pos.li}"] .cw[data-k="${pos.ki}"] .cc`);
-        if (newAnchor) {
-            const r2 = newAnchor.getBoundingClientRect();
-            pop.style.left = (Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 12, r2.left)) + window.scrollX) + "px";
-            pop.style.top = (r2.bottom + window.scrollY + 6) + "px";
-        }
-        // debounced save — keep original `old` so rollback goes all the way back
-        pendingSave = { s, nt, old };
-        clearTimeout(saveTimer);
-        saveTimer = setTimeout(flushSave, 500);
+        const nt = lines.join("\n");
+        if (nt === curSong.text) return;
+        curSong.text = nt;
+        hasUnsaved = (curSong.text !== initialText);
+        renderSongs();
+        updatePosition();
+        render();
     }
 }
 
 function closeChordPop() {
+    if (activeChordPopRevert) {
+        const revert = activeChordPopRevert;
+        activeChordPopRevert = null;
+        revert();
+    }
     document.querySelectorAll(".cdpop").forEach(p => p.remove());
 }
 function fixChordCollisions() {
