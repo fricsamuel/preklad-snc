@@ -838,3 +838,8 @@ textarea.f1 {
     .cc { color: #000 !important; background: none !important; outline: none !important }
     pre.song { font-size: 14pt }
 }
+
+/* ---- přesouvání akordů ---- */
+.cc { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }
+.cc.mv { background: var(--ch); color: var(--bg); outline: 2px solid var(--ch); border-radius: 3px }
+body.mvg { user-select: none; -webkit-user-select: none; cursor: ew-resize }
