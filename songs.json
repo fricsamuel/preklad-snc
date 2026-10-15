@@ -61,13 +61,6 @@
     "slug": "otce-nas-nebesky-cz"
   },
   {
-    "id": "mv53p9yr",
-    "title": "Základ můj",
-    "author": "Eric Liljero a Hillsong (Reuben Morgan and Jonas Myrin) / CZ text: Libor Koloničný, Pavel Kantor",
-    "text": "{INTRO}\n[A] [F#m] [D] [E]\n\n{V1}\n[A]Naději mám jen v Ježíši,\n[D]On srdce mé [E]vždy utiší.\n[F#m]Tíží mě hřích [F#m/E]a tento svět,\n[D]hledím na [E]kříž, nechci [A]jít zpět.\n\n{REF}\n[D]Ská[F#m]lo má, [E]při mně stůj\n[A/C#]Ježí[D]ši, [F#m]si základ [E]můj\n[A/C#]Kéž [D]mi tvé [F#m]světlo [E]dál\nsvítí [A]tmou\n\n{V2}\n[A]Když bouře zlá zas útočí,\n[D]já nalézám [E]v něm bezpečí.\n[F#m]láskou mně svou [F#m/E]on objímá,\n[D]milost a [E]pokoj [A]přijímám,\nmilost a pokoj přijímám.\n\n{REF}\n[D]Ská[F#m]lo má, [E]při mně stůj\n[A/C#]Ježí[D]ši, [F#m]si základ [E]můj\n[A/C#]Kéž [D]mi tvé [F#m]světlo [E]dál\nsvítí [A]tmou\n\n{MEZIHRA}\n[A] [F#m] [D] [E] [A] /: [D] [F#m] [E] [A/C#] :/ [A]\n\n{REF}\n[D]Ská[F#m]lo má, [E]při mně stůj\n[A/C#]Ježí[D]ši, [F#m]si základ [E]můj\n[A/C#]Kéž [D]mi tvé [F#m]světlo [E]dál\nsvítí [A]tmou\n\n{V3}\n[A]Vrátí se k nám, jak Pán a Král,\n[D]haleluja, [E]Beránka chval.\n[F#m]Svůj domov mám, [F#m/E]já jistě vím,\n[D]kde mého [E]Otce [A]uvidím.",
-    "slug": "zaklad-muj-cz"
-  },
-  {
     "id": "mv5m0310",
     "title": "Nekonečná láska",
     "author": "Cory Asbury, CZ text z SK textu: ESPÉ",
@@ -157,5 +150,12 @@
     "author": "Janka Šinková, hudba: BCC",
     "text": "{V1}\n/: [D]Boh tak miloval svet,\nže [Hm7]svojho [A]Syna [G]nám dal :/\n\n[Gmaj7]{REF}\n[G/D]Neko[D]nečná milosť [Gmaj7]tak [G6]vzácna,\n[D/F#]ma spasila, keď [Asus4]niesol si môj hriech.\n[G/D]Bezhrani[D]čná, predivná [Gmaj7]lás[G6]ka,\n[D/F#]Ťa viedla [A]na kríž, aby [Gmaj7/9]ja som mohol [Gmaj7]žiť.\n\n{BRIDGE}\n[Hm7]Predivná [A]lás[G]ka. (4x)",
     "slug": "boh-tak-miloval-svet-cz"
+  },
+  {
+    "id": "mv53p9yr",
+    "title": "Základ můj",
+    "author": "Eric Liljero a Hillsong (Reuben Morgan and Jonas Myrin) / CZ text: Libor Koloničný, Pavel Kantor",
+    "text": "{INTRO}\n[A] [F#m] [D] [E]\n\n{V1}\nN[A]aději mám jen v Ježíši,\n[D]On srdce mé [E]vždy utiší.\n[F#m]Tíží mě hřích [F#m/E]a tento svět,\n[D]hledím na [E]kříž, nechci [A]jít zpět.\n\n{REF}\n[D]Ská[F#m]lo má, [E]při mně stůj\n[A/C#]Ježí[D]ši, [F#m]si základ [E]můj\n[A/C#]Kéž [D]mi tvé [F#m]světlo [E]dál\nsvítí [A]tmou\n\n{V2}\n[A]Když bouře zlá zas útočí,\n[D]já nalézám [E]v něm bezpečí.\n[F#m]láskou mně svou [F#m/E]on objímá,\n[D]milost a [E]pokoj [A]přijímám,\nmilost a pokoj přijímám.\n\n{REF}\n[D]Ská[F#m]lo má, [E]při mně stůj\n[A/C#]Ježí[D]ši, [F#m]si základ [E]můj\n[A/C#]Kéž [D]mi tvé [F#m]světlo [E]dál\nsvítí [A]tmou\n\n{MEZIHRA}\n[A] [F#m] [D] [E] [A] /: [D] [F#m] [E] [A/C#] :/ [A]\n\n{REF}\n[D]Ská[F#m]lo má, [E]při mně stůj\n[A/C#]Ježí[D]ši, [F#m]si základ [E]můj\n[A/C#]Kéž [D]mi tvé [F#m]světlo [E]dál\nsvítí [A]tmou\n\n{V3}\n[A]Vrátí se k nám, jak Pán a Král,\n[D]haleluja, [E]Beránka chval.\n[F#m]Svůj domov mám, [F#m/E]já jistě vím,\n[D]kde mého [E]Otce [A]uvidím.",
+    "slug": "zaklad-muj-cz"
   }
 ]
