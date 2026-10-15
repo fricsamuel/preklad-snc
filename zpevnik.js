@@ -697,7 +697,6 @@ if (!("wakeLock" in navigator)) $("#wk").hidden = true;
 // ---- tisk ----
 $("#pr").onclick = () => window.print();
 
-
 // ---- přesouvání akordů (podržet ~0,6 s a táhnout; po puštění se uloží) ----
 const HOLD = 600;
 function lineParts(raw) { const re = /\[([^\]\s][^\]]{0,10})\]/g; let plain = "", last = 0, m; const cs = []; while ((m = re.exec(raw))) { plain += raw.slice(last, m.index); cs.push({ c: m[1], p: plain.length }); last = m.index + m[0].length } plain += raw.slice(last); return { plain, cs } }
@@ -715,47 +714,66 @@ function plainIdx(ln, c) {
     }
     return null
 }
+function caretRect(c) {
+    const r = document.createRange(), L = c.n.data.length, o = Math.min(c.o, L);
+    r.setStart(c.n, o); r.collapse(true); let b = r.getClientRects()[0];
+    if (b && (b.height || b.width)) return { x: b.left, y: b.top, h: b.height };
+    if (o > 0) { r.setStart(c.n, o - 1); r.setEnd(c.n, o); b = r.getClientRects()[0]; if (b) return { x: b.right, y: b.top, h: b.height } }
+    if (o < L) { r.setStart(c.n, o); r.setEnd(c.n, o + 1); b = r.getClientRects()[0]; if (b) return { x: b.left, y: b.top, h: b.height } }
+    return null
+}
 function mvToast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2800) }
-let mv = null, noClick = false;
-function startMv() {
+let mv = null, noClick = false, ghost = null;
+function mvBegin(el, x, y, touch) {
+    if (S.edit || S.pres) return;
+    const cw = el.parentElement, ln = cw.closest(".ln");
+    mv = { el, cw, ln, x0: x, y0: y, on: false, li: +cw.dataset.l, k: +cw.dataset.k, p: null, touch: !!touch };
+    mv.t = setTimeout(mvStart, HOLD)
+}
+function mvStart() {
     const m = mv; if (!m) return;
     const s = songs.find(x => x.id === S.song); if (!s) { mv = null; return }
     const raw = s.text.replace(/\r/g, "").split("\n"), cs = lineParts(raw[m.li] || "").cs;
     if (!cs[m.k] || cs[m.k].c !== m.cw.dataset.c) { mv = null; mvToast("Tenhle akord nejde přesunout (zobrazený text se liší od uloženého)."); return }
     const tr = m.cw.firstElementChild.getBoundingClientRect(), cr = m.el.getBoundingClientRect();
     m.dy = (tr.top + tr.height / 2) - (cr.top + cr.height / 2);
-    m.sid = s.id; m.raw0 = raw; m.lines = raw.slice(); m.on = true;
+    m.sid = s.id; m.raw0 = raw; m.on = true;
+    ghost = document.createElement("div"); ghost.className = "mvghost"; ghost.style.display = "none";
+    const lb = document.createElement("span"); lb.textContent = m.el.textContent; ghost.appendChild(lb); document.body.appendChild(ghost);
     m.el.classList.add("mv"); document.body.classList.add("mvg"); if (navigator.vibrate) navigator.vibrate(25)
 }
-document.addEventListener("pointerdown", e => {
-    if (e.button || S.edit || S.pres) return;
-    const el = e.target.closest && e.target.closest(".ln .cc"); if (!el) return;
-    const cw = el.parentElement, ln = cw.closest(".ln");
-    mv = { el, cw, ln, x0: e.clientX, y0: e.clientY, on: false, li: +cw.dataset.l, k: +cw.dataset.k, last: null };
-    mv.t = setTimeout(startMv, HOLD)
-});
-document.addEventListener("pointermove", e => {
-    if (!mv) return;
-    if (!mv.on) { if (Math.hypot(e.clientX - mv.x0, e.clientY - mv.y0) > 10) { clearTimeout(mv.t); mv = null } return }
-    e.preventDefault();
-    const pr = mv.ln.parentElement.getBoundingClientRect(), x = Math.max(pr.left + 2, Math.min(pr.right - 2, e.clientX));
-    const p = plainIdx(mv.ln, caretAt(x, e.clientY + mv.dy)); if (p == null || p === mv.last) return; mv.last = p;
-    const r = moveChord(mv.lines[mv.li], mv.k, p); if (r.raw === mv.lines[mv.li]) return;
-    mv.lines[mv.li] = r.raw; mv.k = r.k;
-    mv.ln.innerHTML = chordsL(esc(r.raw), S.tr, mv.li) + "\n";
-    mv.el = mv.ln.querySelector(`.cw[data-k="${r.k}"] .cc`); if (mv.el) mv.el.classList.add("mv"); mv.cw = mv.el && mv.el.parentElement
-}, { passive: false });
-document.addEventListener("touchmove", e => { if (mv && mv.on) e.preventDefault() }, { passive: false });
-document.addEventListener("contextmenu", e => { if (mv || (e.target.closest && e.target.closest(".ln .cc"))) e.preventDefault() });
-document.addEventListener("click", e => { if (noClick) { e.stopPropagation(); e.preventDefault() } }, true);
-document.addEventListener("pointercancel", () => { const m = mv; if (!m) return; clearTimeout(m.t); mv = null; if (m.on) { document.body.classList.remove("mvg"); renderSongs() } });
-document.addEventListener("pointerup", async () => {
+function mvMove(x, y) {
+    if (!mv) return false;
+    if (!mv.on) { if (Math.hypot(x - mv.x0, y - mv.y0) > 10) { clearTimeout(mv.t); mv = null } return false }
+    const pr = mv.ln.parentElement.getBoundingClientRect(), cx = Math.max(pr.left + 2, Math.min(pr.right - 2, x));
+    const c = caretAt(cx, y + mv.dy), p = plainIdx(mv.ln, c); if (p == null) return true;
+    mv.p = p; const b = caretRect(c);
+    if (b && ghost) { ghost.style.display = "block"; ghost.style.left = b.x + "px"; ghost.style.top = b.y + "px"; ghost.style.height = b.h + "px" }
+    return true
+}
+async function mvEnd(ok) {
     const m = mv; if (!m) return; clearTimeout(m.t); mv = null; if (!m.on) return;
-    document.body.classList.remove("mvg"); noClick = true; setTimeout(() => noClick = false, 400);
-    const s = songs.find(x => x.id === m.sid); if (!s) return;
-    const nt = m.lines.join("\n"), old = s.text;
-    if (nt === m.raw0.join("\n")) { renderSongs(); return }
+    document.body.classList.remove("mvg"); m.el.classList.remove("mv"); if (ghost) { ghost.remove(); ghost = null }
+    noClick = true; setTimeout(() => noClick = false, 500);
+    const s = songs.find(x => x.id === m.sid); if (!ok || !s || m.p == null) return;
+    const lines = m.raw0.slice(); lines[m.li] = moveChord(lines[m.li], m.k, m.p).raw;
+    const nt = lines.join("\n"), old = s.text;
+    if (nt === m.raw0.join("\n")) return;
     s.text = nt; renderSongs();
     try { const msg = await store("save", { ...s, text: nt }); mvToast("Akord přesunut. " + msg) }
     catch (err) { const s2 = songs.find(x => x.id === m.sid); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
-});
+}
+const chordEl = e => e.target.closest && e.target.closest(".ln .cc");
+// myš
+document.addEventListener("pointerdown", e => { if (e.pointerType === "touch" || e.button) return; const el = chordEl(e); if (el) mvBegin(el, e.clientX, e.clientY) });
+document.addEventListener("pointermove", e => { if (e.pointerType !== "touch" && mvMove(e.clientX, e.clientY)) e.preventDefault() });
+document.addEventListener("pointerup", e => { if (e.pointerType !== "touch") mvEnd(true) });
+document.addEventListener("pointercancel", e => { if (e.pointerType !== "touch") mvEnd(false) });
+// dotyk (touch události: cíl se během tažení nemění, takže na telefonu funguje spolehlivě)
+document.addEventListener("touchstart", e => { if (e.touches.length !== 1) { mvEnd(false); return } const el = chordEl(e); if (el) mvBegin(el, e.touches[0].clientX, e.touches[0].clientY, true) }, { passive: true });
+document.addEventListener("touchmove", e => { if (!mv || !mv.touch) return; const t = e.touches[0]; if (mvMove(t.clientX, t.clientY)) e.preventDefault() }, { passive: false });
+document.addEventListener("touchend", e => { if (!mv || !mv.touch) return; if (mv.on) e.preventDefault(); mvEnd(true) }, { passive: false });
+document.addEventListener("touchcancel", () => { if (mv && mv.touch) mvEnd(false) });
+document.addEventListener("contextmenu", e => { if (mv || (e.target.closest && e.target.closest(".ln .cc"))) e.preventDefault() });
+document.addEventListener("click", e => { if (noClick) { e.stopPropagation(); e.preventDefault() } }, true);
+// ---- /přesouvání akordů

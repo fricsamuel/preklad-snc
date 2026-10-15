@@ -843,3 +843,10 @@ textarea.f1 {
 .cc { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }
 .cc.mv { background: var(--ch); color: var(--bg); outline: 2px solid var(--ch); border-radius: 3px }
 body.mvg { user-select: none; -webkit-user-select: none; cursor: ew-resize }
+
+/* ---- přesouvání akordů v2 */
+.cc { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }
+.cc.mv { background: var(--ch); color: var(--bg); outline: 2px solid var(--ch); border-radius: 3px }
+body.mvg { user-select: none; -webkit-user-select: none }
+.mvghost { position: fixed; z-index: 200; pointer-events: none; border-left: 3px solid var(--ch); width: 0 }
+.mvghost span { position: absolute; bottom: 100%; left: -3px; background: var(--ch); color: var(--bg); font: 700 14px var(--sans); padding: 2px 6px; border-radius: 6px; white-space: nowrap }
