@@ -145,13 +145,6 @@
     "slug": "boh-tak-miloval-svet-cz"
   },
   {
-    "id": "mv9w2p26",
-    "title": "Jen Ty, Pane můj",
-    "author": "neznámý",
-    "text": "{V1}\n/: [Am]Mnoho je těch, [Dm]kteří kolem volají, [Em]\nv Bohu žádnou pomoc nenajdeš. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V2}\n/: [Am]Volal jsem k Pá[Dm]nu svému v úzkosti,\na [Em]on prosbu moji vyslyšel. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V3}\n/: [Am]Ty mi dáváš s[Dm]pánek, novou sílu,\nv [Em]novém dni mne znovu pozvedáš. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V4}\n/:[Am] Nebudu se [Dm]bát ani tisíců\n[Em]těch, kdo mne pronásledují. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n",
-    "slug": "jen-ty-pane-muj-cz"
-  },
-  {
     "id": "mv3xpfdk",
     "title": "Chceme Ti říct",
     "author": "Jindřich Černohorský",
@@ -164,5 +157,12 @@
     "author": "Chris Tomlin, Jesse Reeves, Jonas Myrin, Matt Redman / CZ text: Jana Forsythová, David Kogut",
     "text": "{V1}\n[Em7]Vodu ve [C]víno změ[G]nils, [Em7]slepé oči [C]uzdra[G]vil.\nNení [Am7]žádný jako Ty, Bůh [Dsus4]náš. [D]\n[Em7]Do temnoty [C]záříš [G]nám, [Em]z popela [C]nás pozve[G]dáš.\nNení [Am7]žádný jako Ty, Bůh [Dsus4]náš. [D]\n[Em7]V blízkosti [C]Tvé měníš [G]nás, [Em7]čistotu [C]do srdce [G]dáš.\nNení [Am7]žádný jako Ty, Bůh [Dsus4]náš. [D]\n\n{REF}\n[Em]Větší je náš Bůh, [C]nadevše silný,\n[G]Větší jsi, náš Bože, [D]nežli kdo jiný.\n[Em]Přítel jsi věrný s [C]obrovskou mocí,\n[G]náš Bůh, [D]náš Bůh.\n\n{V2}\n[Em7]V těžkostech [C]nám [G]pomáháš, [Em7]už vím, [C][G]nejsem na to sám.\nAno, [Am7]jde to, když Ty jsi [Dsus4]Bůh [D]náš.\n[Em7]U Tebe vše [C]je [G]možné a [Em]bez Tebe [C]smutné, [G]prázdné.\nAno, [Am7]jde to, když Ty jsi [Dsus4]Bůh [D]náš.\n\n{BRIDGE}\n[Em]A když je náš Bůh s námi, [C]kdo nám pak může bránit?\n[G]A když je náš Bůh s námi, [D]co může proti být?\n[Em]A když je náš Bůh s námi, [C]kdo může stát proti nám?\n[G]A když je náš Bůh s námi, [D]co může zastavit nás? [Em] [C] [G] [D] [Em] [C] [G] [D]",
     "slug": "50-vetsi-je-nas-buh-cz"
+  },
+  {
+    "id": "mv9w2p26",
+    "title": "Jen Ty, Pane můj",
+    "author": "neznámý",
+    "text": "{V1}\n/: [Am]Mnoho je těch, [Dm]kteří kolem volají, [Em]\nv Bohu [F]žádnou [G]pomoc nenaj[Am]deš. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V2}\n/: [Am]Volal jsem k Pánu svému v [Dm]úzkosti,\na [Em]on prosbu moji vyslyšel. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V3}\n/: [Am]Ty mi dáváš spánek, novou [Dm]sílu,\nv [Em]novém dni mne znovu pozvedáš. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n{V4}\n/: [Am]Nebudu se bát ani [Dm]tisíců\n[Em]těch, kdo mne pronásledují. :/\n{REF}\n/: [Am]Jen Ty, [G]Pane můj, jen [Am]Ty's můj štít,\n[F]má sláva, [G]ty mou hlavu pozve[Am]dáš. :/\n",
+    "slug": "jen-ty-pane-muj-cz"
   }
 ]
