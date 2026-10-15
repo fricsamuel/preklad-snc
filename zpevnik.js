@@ -25,7 +25,7 @@ function routeFromUrl() {                                    // z adresy zjistí
     const q = new URLSearchParams(location.search).get("song");
     const slug = q || decodeURIComponent(location.pathname.slice(baseDir.length)).replace(/\/$/, "");
     const so = slug && songs.find(x => songSlug(x) === slug);
-    S.song = so ? so.id : null; S.edit = null; S.tr = 0; S.pop = false; S.pres = false;
+    S.trFor = null; S.song = so ? so.id : null; S.edit = null; S.tr = 0; S.pop = false; S.pres = false;
     if (!so && q) S.msg = "Písnička „" + q + "“ nebyla nalezena.";
     setUrl(so || null, false);
 }
@@ -142,6 +142,11 @@ function secStr(t, a, k) {
 document.addEventListener("mousedown", e => { if (e.target.closest(".ed button")) e.preventDefault() });
 async function renderSongs() {
     await loadSongs(); const m = $("#main"), qv = norm($("#q").value.trim());
+    $("#pr").hidden = !S.song || !!S.edit;
+    if (S.song) {
+        if (S.trFor !== S.song) { S.tr = +ls("tr_" + S.song) || 0; S.trFor = S.song }
+        else ls("tr_" + S.song, S.tr);
+    } else S.trFor = null;
     if (S.edit) {
         const s = S.edit; m.innerHTML = `<article><h2>${s.id ? "Upravit písničku" : "Nová písnička"}</h2>
 <input class="f1" id="st" placeholder="Název" value="${esc(s.title)}">
@@ -670,3 +675,23 @@ document.addEventListener("change", e => {
     const files = [...e.target.files]; e.target.value = "";
     aiAdd(files, S.aim);
 });
+
+// ---- nezhasínání displeje (Wake Lock) ----
+let wl = null;
+const wkSync = () => $("#wk").classList.toggle("on", !!wl);
+async function wake(on) {
+    try {
+        if (on) {
+            wl = await navigator.wakeLock.request("screen");
+            wl.addEventListener("release", () => { wl = null; wkSync() });
+        } else { await wl?.release(); wl = null }
+    } catch (e) { wl = null }
+    wkSync();
+}
+$("#wk").onclick = async () => { const on = !wl; await wake(on); ls("wake", on ? "1" : "0") };
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && ls("wake") === "1" && !wl) wake(true) });
+if (ls("wake") === "1") wake(true);
+if (!("wakeLock" in navigator)) $("#wk").hidden = true;
+
+// ---- tisk ----
+$("#pr").onclick = () => window.print();

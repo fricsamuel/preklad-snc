@@ -828,3 +828,13 @@ textarea.f1 {
 .cpwk + .cpd { fill: var(--ink); }
 .cpbk + .cpd { fill: #fff; }
 
+
+/* ---- nezhasínání + tisk ---- */
+#wk.on { background: var(--acc); color: var(--bg); border-color: var(--acc) }
+@media print {
+    header, nav, #bd, .ed, .pres, .tp, .prb, .toast, .cdpop, button, .btn, .info { display: none !important }
+    html, body, .wrap, main, article { background: #fff !important; color: #000 !important; margin: 0; padding: 0; display: block; max-width: none }
+    :root { --ink: #000; --bg: #fff; --ch: #000; --mute: #000 }
+    .cc { color: #000 !important; background: none !important; outline: none !important }
+    pre.song { font-size: 14pt }
+}
