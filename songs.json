@@ -12,13 +12,6 @@
     "text": "{V1}\n[D] Kdybych byl mocný bohatý [G]\n[D] a vládl velkým královstvím, [G] \n[D] tak kým bych byl, čím bych byl?\n[G] Kdybych lásku necítíl? [D] \nCopak bych doopravdy žil? [G]\n\n{V2}\n[D] I kdybych vlastnil celou zem, [G]\n[D] přesto bych nevědel kdo jsem. [G]\n[Hm] Proč mám tu být, jak mám žít?\n[G] Kdo mi umí poradit, [D]\njakou cestou měl bych jít? [G]\n\n{REF}\n  Tak [D] prosím Pane veď mé kroky,\n  já nevím jak dál [A/C#]\n  Vždyť[Hm] osud můj máš ve svých rukou,\n  [G]čeho bych se bál?\n [D] Už život svůj si neumím\n  bez Tebe předsta[Hm]vit,\n  zpívám Ha[G]lelu[D]ja,[A] jsi král [D]\n\n{V3}\n[D] Já vím, že stvořils celý svět, [G] \n[D] vesmír jen může vyprávět, [G] \n[Hm] že Ty jsi Pán, Bůh a Král \n[G] kdo by se Ti vyrovnal, [D] \nto, jakou lásku jsi nám dal? [G] "
   },
   {
-    "id": "mv3xuobj",
-    "title": "Můj Bůh je můj štít",
-    "author": "Frank Gallio / Karel Řežábek",
-    "text": "{V1}\n[D]Můj Bůh je můj [C/D]štít,\n[G/D]je mou písní.\n[D]Já vím, On mi [C/D]odpoví\na [G/D]mocí svého jména [D]vysvobodí.\n\n{V2}\n[D]Můj Bůh je pramen [C/D]vody živé,\n[G/D]já půjdu v jeho síle.\n[D]Zpívám chválu [C/D]jeho jménu,\n[G/D]Bohu jedinému, na [D]výšinách.\n\n{REF}\nChci [C]žít ve [G]stínu křídel [D]Tvých,\nspě[C]chám do [G]stínu křídel [D]Tvých,\nsmím [C]žít ve [G]stínu křídel [D]Tvých.\nTeď smím, jít v pokoji [C]dál,\nvím, že [G]jsi mi blízko, [D]haleluja.",
-    "slug": "muj-buh-je-muj-stit-cz"
-  },
-  {
     "id": "mv50gqnw",
     "title": "Stačí tvoje áno",
     "author": "Lenka Kogutová, Barbora Ondrušková",
@@ -213,5 +206,12 @@
     "author": "autor: John de Jong / CZ text: Karel Řežábek",
     "text": "{V1}\n[C]Mou cestu v [Fmaj7]rukou máš, [Am7]jdu s důvě[G]rou\n[C]neselže [Fmaj7]láska [Am7]Tvá, jdu s [G]důvěrou.\nAť se [Fmaj7]třeba hory [Am7]zřítí do moře, [G]jdu s důvěrou,\nať i [Fmaj7]hvězdy [Am7]padají a [G]svět kolem se hroutí.\n\n{V2}\n[C]Když cestu [Fmaj7]nevidím, jdu [Am7]s [G]důvěrou,\n[C]vedeš [Fmaj7]mne slovem [Am7]svým, [G]jdu s důvěrou.\nI když [Fmaj7]musím projít [Am7]temným údolím, [G]jdu s důvěrou,\nvím, [Fmaj7]že zase [Am7]postavíš [G]mě pevně na své skále.\n\n{REF}\nKaždý [C]den novou [Fmaj7]milost z Tvých [Am7]dlaní smím si [G]brát.\nJako [C]strom ve Tvém [Fmaj7]chrámu,\nv pev[Am7]ných zdech Tvé [G]věrné lásky [Fmaj7]úkryt [G]mám. ([C])",
     "slug": "mou-cestu-v-rukou-mas-cz"
+  },
+  {
+    "id": "mv3xuobj",
+    "title": "Můj Bůh je můj štít",
+    "author": "Frank Gallio / Karel Řežábek",
+    "text": "{V1}\n[D]Můj Bůh je můj [C/D]štít,\n[G/D]je mou písní.\n[D]Já vím, On mi [C/D]odpoví\na [G/D]mocí svého jména [D]vysvobodí.\n\n{V2}\n[D]Můj Bůh je pramen vod[C/D]y živé,\n[G/D]já půjdu v jeho síle.\n[D]Zpívám chválu jeho[C/D] jménu,\nBo[G/D]hu jedinému, na [D]výšinách.\n\n{REF}\nChci [C]žít ve [G]stínu křídel [D]Tvých,\nspě[C]chám do [G]stínu křídel [D]Tvých,\nsmím [C]žít ve [G]stínu křídel [D]Tvých.\nTeď smím, jít v pokoji [C]dál,\nvím, že [G]jsi mi blízko, [D]haleluja.",
+    "slug": "muj-buh-je-muj-stit-cz"
   }
 ]
