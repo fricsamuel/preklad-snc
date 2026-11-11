@@ -250,8 +250,13 @@ async function songAct(t) {
         pm.textContent = (await copyText(qlText(so, ps, S.seq, S.pl ?? 2))) ? "Zkopírováno. Ve FreeShow stiskni Ctrl+Alt+I (Cmd+Option+I na Macu)." : "Kopírování se nepovedlo."
     }
     else if (a === "aip") { const p = $("#aipin"); if (p && p.value) ls("pin", p.value); if (!ls("pin")) { toast("Nejdřív zadej PIN."); return } $("#aif").click() }
+<<<<<<< HEAD
     else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; S.edit = { title: d.title, author: d.author, text: toAbove(d.text) }; S.draft = id; await renderSongs(); showSrc(id); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
     else if (a === "aix") { idb.del(id); drafts = drafts.filter(x => x.id !== id); jobs = jobs.filter(x => x.id !== id); saveDrafts(); renderSongs() }
+=======
+    else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; S.edit = { title: d.title, author: d.author, text: toAbove(d.text) }; S.draft = id; await renderSongs(); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
+    else if (a === "aix") { drafts = drafts.filter(x => x.id !== id); jobs = jobs.filter(x => x.id !== id); saveDrafts(); renderSongs() }
+>>>>>>> refs/remotes/origin/main
     else if (a === "air") { const j = jobs.find(x => x.id === id); if (j) { j.st = "wait"; aiPump(); renderSongs() } }
     else if (a === "new") { S.edit = { title: "", author: "", text: "" }; renderSongs() }
     else if (a === "edit") { const so = songs.find(x => x.id === id); S.edit = { ...so, text: toAbove(so.text) }; renderSongs() }
@@ -260,7 +265,11 @@ async function songAct(t) {
         const s = { ...S.edit, title: $("#st").value.trim(), author: $("#sa").value.trim(), text: $("#sx").value.replace(/\r/g, "").replace(/[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").replace(/^\n+|\s+$/g, "") };
         if (!s.title || !s.text.trim()) { $("#sm").textContent = "Vyplň název a text."; return }
         if (!s.id) s.id = Date.now().toString(36); if (!s.slug) s.slug = uniqueSlug(s.title, s.id); if (API) ls("pin", $("#sp").value); $("#sm").textContent = "Ukládám…";
+<<<<<<< HEAD
         try { S.msg = await store("save", s); if (S.draft) { idb.del(S.draft); drafts = drafts.filter(x => x.id !== S.draft); saveDrafts(); S.draft = null } S.edit = null; S.song = s.id; S.tr = 0; S.pres = false; setUrl(songs.find(x => x.id === s.id), true); renderSongs() } catch (e) { $("#sm").textContent = "Nepodařilo se uložit: " + e.message }
+=======
+        try { S.msg = await store("save", s); if (S.draft) { drafts = drafts.filter(x => x.id !== S.draft); saveDrafts(); S.draft = null } S.edit = null; S.song = s.id; S.tr = 0; S.pres = false; setUrl(songs.find(x => x.id === s.id), true); renderSongs() } catch (e) { $("#sm").textContent = "Nepodařilo se uložit: " + e.message }
+>>>>>>> refs/remotes/origin/main
     }
     else if (a === "del") { t.parentElement.innerHTML = (API ? `<input class="f1" id="dp" type="password" placeholder="PIN" style="max-width:180px;margin:0">` : "") + `<button class="btn ac" data-s="del2" data-id="${esc(id)}">Smazat</button><button class="btn" data-s="open" data-id="${esc(id)}">Zrušit</button>`; const d = $("#dp"); if (d) d.focus() }
     else if (a === "del2") {

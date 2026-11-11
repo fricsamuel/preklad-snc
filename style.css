@@ -815,6 +815,99 @@ textarea.f1 {
 }
 
 /* Chord move tab panel */
+.cdmv-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px 12px;
+    width: 100%;
+    min-width: 200px;
+}
+
+.cdmv-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.cdmv-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.cdmv {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 42px;
+    height: 36px;
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s, color .12s, border-color .12s, transform .1s;
+    user-select: none;
+}
+
+.cdmv:hover {
+    background: var(--ch);
+    color: #fff;
+    border-color: var(--ch);
+}
+
+.cdmv:active {
+    transform: scale(.92);
+}
+
+.cdmv-footer {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+}
+
+.cdsave-btn {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 7px 16px;
+    font: 600 13px var(--sans);
+    cursor: pointer;
+    color: var(--ink);
+    transition: all .15s ease;
+    width: 100%;
+    max-width: 170px;
+    text-align: center;
+}
+
+.cdsave-btn:hover {
+    border-color: var(--acc);
+}
+
+.cdsave-btn.cdpending {
+    background: #16a34a;
+    color: #fff;
+    border-color: #16a34a;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.3);
+}
+
+.cdsave-btn.cdpending:hover {
+    background: #15803d;
+    border-color: #15803d;
+}
+
+.cdsave-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .cdcont {
     display: flex;
     justify-content: center;
@@ -955,41 +1048,61 @@ textarea.f1 {
     }
 }
 
-textarea {
-    color: inherit
+/* ---- přesouvání akordů ---- */
+.cc {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none
 }
 
-/* editor písničky: neproporcionální písmo, aby akordy nad řádkem seděly nad správnou slabikou */
-#sx {
-    font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-    white-space: pre;
-    overflow: auto;
-    tab-size: 4
+.cc.mv {
+    background: var(--ch);
+    color: var(--bg);
+    outline: 2px solid var(--ch);
+    border-radius: 3px
 }
 
-/* originál screenshotu u konceptu z AI */
-.aisrc {
-    margin: 0 0 12px
+body.mvg {
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: ew-resize
 }
 
-.aisrc summary {
-    cursor: pointer;
-    color: var(--mute);
-    font-size: 14px;
-    margin-bottom: 6px
+/* ---- přesouvání akordů v2 */
+.cc {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none
 }
 
-.aisrc div {
-    max-height: 50vh;
-    overflow: auto;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: #fff
+.cc.mv {
+    background: var(--ch);
+    color: var(--bg);
+    outline: 2px solid var(--ch);
+    border-radius: 3px
 }
 
-.aisrc img {
-    display: block;
-    width: 100%;
-    height: auto;
-    cursor: zoom-in
+body.mvg {
+    user-select: none;
+    -webkit-user-select: none
+}
+
+.mvghost {
+    position: fixed;
+    z-index: 200;
+    pointer-events: none;
+    border-left: 3px solid var(--ch);
+    width: 0
+}
+
+.mvghost span {
+    position: absolute;
+    bottom: 100%;
+    left: -3px;
+    background: var(--ch);
+    color: var(--bg);
+    font: 700 14px var(--sans);
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap
 }
