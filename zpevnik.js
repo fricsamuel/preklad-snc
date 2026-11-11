@@ -194,6 +194,7 @@ async function renderSongs() {
     } else S.trFor = null;
     if (S.edit) {
         const s = S.edit; m.innerHTML = `<article><h2>${s.id ? "Upravit písničku" : "Nová písnička"}</h2>
+${!s.id && !S.draft ? aiBox() : ""}
 ${S.draft ? '<details class="aisrc" open><summary>Originál ze screenshotu (klepnutím na obrázek ho zvětšíš)</summary><div id="aisrc"></div></details>' : ""}
 <input class="f1" id="st" placeholder="Název" value="${esc(s.title)}">
 <input class="f1" id="sa" placeholder="Autor (nepovinné)" value="${esc(s.author || "")}">
@@ -224,7 +225,7 @@ ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládá
         } S.song = null
     }
     const l = songs.filter(s => !qv || qv.split(/\s+/).every(t => norm(s.title + " " + (s.author || "") + " " + strip(inl(s.text))).includes(t))).sort((a, b) => a.title.localeCompare(b.title, "cs"));
-    m.innerHTML = `<article><h2>Zpěvník</h2><p class="info">${esc(S.msg || l.length + " písniček")}</p><button class="btn ac" data-s="new">+ Nová písnička</button><div style="height:14px"></div>${aiBox()}` + l.map(s => `<button class="r" data-s="open" data-id="${esc(s.id)}"><b>${esc(s.title)}</b>${esc(s.author || "")}</button>`).join("") + `</article>`; S.msg = ""
+    m.innerHTML = `<article><h2>Zpěvník</h2><p class="info">${esc(S.msg || l.length + " písniček")}</p><button class="btn ac" data-s="new">+ Nová písnička</button><div style="height:14px"></div><div class="aib" id="airows">${aiRows()}</div>` + l.map(s => `<button class="r" data-s="open" data-id="${esc(s.id)}"><b>${esc(s.title)}</b>${esc(s.author || "")}</button>`).join("") + `</article>`; S.msg = ""
 }
 async function songAct(t) {
     const a = t.dataset.s, id = t.dataset.id;
@@ -250,10 +251,10 @@ async function songAct(t) {
         pm.textContent = (await copyText(qlText(so, ps, S.seq, S.pl ?? 2))) ? "Zkopírováno. Ve FreeShow stiskni Ctrl+Alt+I (Cmd+Option+I na Macu)." : "Kopírování se nepovedlo."
     }
     else if (a === "aip") { const p = $("#aipin"); if (p && p.value) ls("pin", p.value); if (!ls("pin")) { toast("Nejdřív zadej PIN."); return } $("#aif").click() }
-    else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; S.edit = { title: d.title, author: d.author, text: toAbove(d.text) }; S.draft = id; await renderSongs(); showSrc(id); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
-    else if (a === "aix") { idb.del(id); drafts = drafts.filter(x => x.id !== id); jobs = jobs.filter(x => x.id !== id); saveDrafts(); renderSongs() }
-    else if (a === "air") { const j = jobs.find(x => x.id === id); if (j) { j.st = "wait"; aiPump(); renderSongs() } }
-    else if (a === "new") { S.edit = { title: "", author: "", text: "" }; renderSongs() }
+    else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; if (S.edit && ($("#st") && $("#st").value.trim() || $("#sx") && $("#sx").value.trim()) && !confirm("V editoru je rozepsaný text. Nahradit ho konceptem z AI?")) return; S.edit = { title: d.title, author: d.author, text: toAbove(d.text) }; S.draft = id; await renderSongs(); showSrc(id); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
+    else if (a === "aix") { idb.del(id); drafts = drafts.filter(x => x.id !== id); jobs = jobs.filter(x => x.id !== id); saveDrafts(); aiRefresh() }
+    else if (a === "air") { const j = jobs.find(x => x.id === id); if (j) { j.st = "wait"; aiPump(); aiRefresh() } }
+    else if (a === "new") { S.edit = { title: "", author: "", text: "" }; S.draft = null; renderSongs() }
     else if (a === "edit") { const so = songs.find(x => x.id === id); S.edit = { ...so, text: toAbove(so.text) }; renderSongs() }
     else if (a === "cancel") { S.edit = null; S.draft = null; renderSongs() }
     else if (a === "save") {
@@ -779,7 +780,7 @@ async function showSrc(id) {
 }
 document.addEventListener("click", e => { const im = e.target.closest(".aisrc img"); if (im) fetch(im.src).then(r => r.blob()).then(b => window.open(URL.createObjectURL(b), "_blank")).catch(() => { }) });
 document.addEventListener("input", e => { if (e.target.id === "aih") S.aih = e.target.value });
-const aiRefresh = () => { if (!S.edit && !S.song && !S.pres) renderSongs() };   // překreslí seznam s frontou
+const aiRefresh = () => { const r = $("#airows"); if (r) r.innerHTML = aiRows() };   // překreslí jen frontu a koncepty (seznam i editor), rozepsaný text zůstane
 function aiAdd(files, merge) {                               // merge = všechny obrázky patří k jedné písničce
     const groups = merge ? [files.slice(0, 4)] : files.map(f => [f]);
     groups.forEach(g => jobs.push({ id: "ai" + Date.now().toString(36) + (jobSeq++), files: g, name: g.map(f => f.name).join(", ") || "obrázek", hint: (S.aih || "").trim().slice(0, 300), st: "wait" }));
@@ -808,13 +809,15 @@ async function aiRun(j) {
     } catch (err) { j.st = "err"; j.msg = err.message; toast("AI se nepovedla: " + j.name) }
     aiRefresh();
 }
-function aiBox() {                                           // blok pod tlačítkem „Nová písnička“: tlačítko, fronta a koncepty
-    if (!API) return "";
-    const rows = jobs.map(j => j.st === "err"
+function aiRows() {                                          // fronta a koncepty (zobrazí se v seznamu i v editoru nové písničky)
+    return jobs.map(j => j.st === "err"
         ? `<div class="job">⚠ ${esc(j.name)} – ${esc(j.msg)} <button class="btn" data-s="air" data-id="${j.id}">Znovu</button><button class="btn" data-s="aix" data-id="${j.id}">×</button></div>`
         : `<div class="job">⏳ ${j.st === "run" ? "Čtu" : "Čeká"}: ${esc(j.name)}</div>`).join("")
         + drafts.map(d => `<div class="job">✓ <b>${esc(d.title)}</b><button class="btn ac" data-s="aid" data-id="${d.id}">Zkontrolovat a uložit</button><button class="btn" data-s="aix" data-id="${d.id}" aria-label="Zahodit">×</button></div>`).join("");
-    return `<div class="aib"><button class="btn" data-s="aip">Z obrázku (AI)</button> <label class="info"><input type="checkbox" id="aim"${S.aim ? " checked" : ""}> více obrázků = jedna písnička</label>${ls("pin") ? "" : ' <input class="f1" id="aipin" type="password" placeholder="PIN" style="max-width:140px;display:inline-block;margin:0">'}<input class="f1" id="aih" maxlength="300" placeholder="Tip pro AI (nepovinné), např. text je slovensky · akordy jsou anglicky · kapodastr na 2. pražci" value="${esc(S.aih || "")}" style="margin:8px 0"><input type="file" id="aif" accept="image/*" multiple hidden>${rows}</div>`;
+}
+function aiBox() {                                           // blok v editoru „+ Nová písnička“: přidání z obrázku, tip pro AI, fronta
+    if (!API) return "";
+    return `<div class="aib aip"><b>Přidat písničku z obrázku (AI)</b><p class="info">Vyber screenshot nebo fotku a AI ji přepíše. Výsledek se objeví níže mezi koncepty, tam ho zkontroluješ a uložíš.</p><input class="f1" id="aih" maxlength="300" placeholder="Tip pro AI (nepovinné), např. text je slovensky · akordy jsou anglicky · kapodastr na 2. pražci" value="${esc(S.aih || "")}" style="margin:8px 0">${ls("pin") ? "" : '<input class="f1" id="aipin" type="password" placeholder="PIN" style="max-width:140px;margin:0 0 8px">'}<button class="btn ac" data-s="aip">Vybrat obrázek</button> <label class="info"><input type="checkbox" id="aim"${S.aim ? " checked" : ""}> více obrázků = jedna písnička</label><input type="file" id="aif" accept="image/*" multiple hidden><div id="airows">${aiRows()}</div></div>`;
 }
 document.addEventListener("change", e => {
     if (e.target.id === "aim") S.aim = e.target.checked;

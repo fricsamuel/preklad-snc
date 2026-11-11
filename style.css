@@ -686,6 +686,21 @@ textarea.f1 {
     margin: 0 0 18px
 }
 
+.aib.aip {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel);
+    padding: 12px 14px
+}
+
+.aib.aip .info {
+    margin: 4px 0
+}
+
+#airows:empty {
+    display: none
+}
+
 .job {
     display: flex;
     flex-wrap: wrap;
