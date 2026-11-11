@@ -53,8 +53,6 @@ const base = (L, a) => L === "B" ? 10 + (a === "#" ? 1 : 0) : PN[L] + (a === "#"
 const firstChord = t => { const re = /\[([^\]\s][^\]]{0,10})\]/g; let m; while ((m = re.exec(t))) if (CRE.test(m[1].split("/")[0])) return m[1]; return null };
 const pcOf = c => { const m = c.split("/")[0].match(CRE); return (base(m[1], m[2]) + 12) % 12 };
 function tchord(c, n) { return c.split("/").map((p, i) => { const m = p.match(CRE); if (!m || (i > 0 && m[3])) return p; return NM[(base(m[1], m[2]) + n + 24) % 12] + m[3] }).join("/") }
-// akord se zobrazí přesně nad místem, kam je v textu napsán: levý okraj akordu = začátek textu hned za [závorkou]
-const chords = (h, n) => h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => `<span class="cw"><span>${b || "\u00a0"}</span><span class="cc" data-chord="${n ? tchord(c, n) : c}">${n ? tchord(c, n) : c}</span></span>`);
 const secLabel = k => { const m = k.match(/^V(\d+)$/i); return m ? m[1] + ". sloka" : /^REF$/i.test(k) ? "Refrén" : /^BRIDGE$/i.test(k) ? "Bridge" : /^CODA$/i.test(k) ? "Coda" : k };
 const chordsL = (h, n, li) => { let k = 0; return h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => { const t = n ? tchord(c, n) : c; return `<span class="cw" data-l="${li}" data-k="${k++}" data-c="${c}"><span${b ? "" : ' class="ph"'}>${b || "\u00a0"}</span><span class="cc" data-chord="${t}">${t}</span></span>` }) };
 function songHTML(t, n) { let o = "", li = 0; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*\{([^}]+)\}\s*$/); o += m ? `<span class="sec">${esc(secLabel(m[1].trim()))}</span>` : `<span class="ln" data-l="${li}">${chordsL(esc(l), n, li)}\n</span>`; li++ } return o }
@@ -76,54 +74,6 @@ function expand(t) {
 }
 document.addEventListener("change", e => { if (e.target.id === "sx") e.target.value = expand(e.target.value) });
 const strip = l => l.replace(/\[[^\]]*\]/g, "").replace(/\s{2,}/g, " ").trim();
-// Sync chord positions from V1 to all other verses (V2, V3, …)
-// Preserves the chord names from each verse, only moves their positions to match V1.
-function syncVersesFromV1(text) {
-    const lines = text.replace(/\r/g, "").split("\n");
-    // Parse into sections: [{header: string|null, lineIdxs: []}]
-    const secs = [];
-    for (let i = 0; i < lines.length; i++) {
-        const m = lines[i].match(/^\s*\{([^}]+)\}\s*$/);
-        if (m) secs.push({ k: m[1].trim().toUpperCase(), r: m[1].trim(), idxs: [] });
-        else if (secs.length) secs[secs.length - 1].idxs.push(i);
-    }
-    const v1 = secs.find(s => s.k === "V1");
-    if (!v1) return text; // nothing to sync
-    // For each verse Vn (n >= 2), apply chord positions from V1 line by line
-    for (const sec of secs) {
-        if (!/^V(\d+)$/.test(sec.k) || sec.k === "V1") continue;
-        const vn = sec;
-        const v1Lines = v1.idxs.map(i => lines[i]);
-        const vnLines = vn.idxs.map(i => lines[i]);
-        let v1li = 0; // index into non-empty v1 lines
-        let vnli = 0; // index into non-empty vn lines
-        // align non-empty lines between v1 and vn
-        const v1content = v1Lines.map((l, i) => ({ l, i })).filter(x => x.l.trim());
-        const vncontent = vnLines.map((l, i) => ({ l, i })).filter(x => x.l.trim());
-        for (let j = 0; j < Math.min(v1content.length, vncontent.length); j++) {
-            const src = v1content[j].l; // V1 line with chords
-            const dst = vncontent[j];   // Vn line
-            const { plain: srcPlain, cs: srcCs } = lineParts(src);
-            const { plain: dstPlain, cs: dstCs } = lineParts(vnLines[dst.i]);
-            if (!srcCs.length) continue; // V1 line has no chords — leave Vn as-is
-            // Re-position each chord in Vn to match corresponding V1 chord position
-            // Use relative position (fraction of line length) if lengths differ
-            const newCs = dstCs.map((ch, ci) => {
-                if (ci >= srcCs.length) return ch; // no corresponding V1 chord
-                const srcPos = srcCs[ci].p;
-                // scale position if plain text lengths differ
-                const scaled = dstPlain.length > 0 && srcPlain.length > 0
-                    ? Math.round(srcPos * dstPlain.length / srcPlain.length)
-                    : srcPos;
-                return { ...ch, p: Math.max(0, Math.min(dstPlain.length, scaled)) };
-            });
-            // Re-sort by position
-            newCs.sort((a, b) => a.p - b.p);
-            lines[vn.idxs[dst.i]] = lineBuild(dstPlain, newCs);
-        }
-    }
-    return lines.join("\n");
-}
 function parts(t) {
     const out = []; let cur = null;
     for (const l of expand(t).split("\n")) {
@@ -136,24 +86,6 @@ function parts(t) {
     }).filter(p => p.blocks.length)
 }
 async function copyText(t) { try { await navigator.clipboard.writeText(t); return true } catch (e) { const x = document.createElement("textarea"); x.value = t; x.style.cssText = "position:fixed;opacity:0"; document.body.appendChild(x); x.select(); let ok = false; try { ok = document.execCommand("copy") } catch (e) { } x.remove(); return ok } }
-function dl(name, txt) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([txt], { type: "application/json" })); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove() }, 500) }
-function fsShow(s, ps, seq, per) {
-    let n = 0; const id = () => "s" + Date.now().toString(36) + (n++).toString(36) + Math.random().toString(36).slice(2, 5);
-    const slides = {}, groups = {}, lay = [];
-    const item = l => ({ type: "text", lines: l.map(v => ({ align: "", text: [{ value: v, style: "font-size:100px;" }] })), style: "top:120px;left:50px;height:840px;width:1820px;", align: "" });
-    for (const i of seq) {
-        const p = ps[i], key = p.label + "|" + JSON.stringify(p.blocks);
-        if (!groups[key]) {
-            const ch = []; for (const b of p.blocks) { if (!per) ch.push(b); else for (let a = 0; a < b.length; a += per)ch.push(b.slice(a, a + per)) }
-            const ids = ch.map(() => id()), col = /^V\d+$/i.test(p.k) ? "#5825f5" : /^REF$/i.test(p.k) ? "#f525a5" : /^BRIDGE$/i.test(p.k) ? "#f5a525" : /^CODA$/i.test(p.k) ? "#25f5a5" : "#25a5f5";
-            ch.forEach((c, j) => { slides[ids[j]] = j ? { group: null, color: null, settings: {}, notes: "", items: [item(c)] } : { group: p.label, color: col, settings: {}, ...(ids.length > 1 ? { children: ids.slice(1) } : {}), notes: "", items: [item(c)] } });
-            groups[key] = ids[0]
-        }
-        lay.push({ id: groups[key] })
-    }
-    const lid = id(), now = Date.now();
-    return { name: s.title, category: null, settings: { activeLayout: lid, template: null }, timestamps: { created: now, modified: now, used: null }, meta: { title: s.title, author: s.author || "" }, slides, layouts: { [lid]: { name: "Default", notes: "", slides: lay } }, media: {} }
-}
 document.addEventListener("change", e => { if (e.target.id === "pl") S.pl = +e.target.value });
 function qlText(s, ps, seq, per) {
     const nm = p => /^V\d+$/i.test(p.k) ? "Verse" : /^REF$/i.test(p.k) ? "Chorus" : /^BRIDGE$/i.test(p.k) ? "Bridge" : /^CODA$/i.test(p.k) ? "Coda" : p.k ? p.label : "Verse";
@@ -203,7 +135,7 @@ async function renderSongs() {
 <div class="edw"><textarea class="f1" id="sx" placeholder="Text písničky – akordy piš do hranatých závorek, např. Jsi Kr[G]al">${esc(s.text)}</textarea>${edBar()}</div>
 <p class="info">Akordy: Jsi Kr[G]al · Části na samostatný řádek: {V1}, {V2}, {REF}. {V2} bez akordů se doplní podle {V1}, prázdné {REF} se doplní refrénem.</p>
 ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládání" value="${esc(ls("pin") || "")}">` : ""}
-<p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button>${s.id && /\{V2\}/i.test(s.text) ? ` <button class="btn" data-s="syncv" data-id="${esc(s.id)}" title="Aplikuje pozice akordů z 1. sloky na všechny ostatní sloky">Sync. sloky ze sloky 1</button>` : ""}</article>`; return
+<p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button></article>`; return
     }
     if (S.song) {
         const s = songs.find(x => x.id === S.song); if (s) {
@@ -216,12 +148,11 @@ ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládá
                     pr = `<div class="pres"><b>Pořadí částí</b><div class="seq">${S.seq.map((i, j) => `<span class="chip">${esc(ps[i].label)}<button data-s="px" data-i="${j}" aria-label="Odebrat">×</button></span>`).join("") || "<i>nic nevybráno</i>"}</div>
 <div class="seq">Přidat: ${Object.entries(uk).map(([l, i]) => `<button class="btn" data-s="pa" data-i="${i}">+ ${esc(l)}</button>`).join("")}</div>
 <label class="info">Řádků na slide (FreeShow): <select id="pl">${[[1, "1"], [2, "2"], [3, "3"], [4, "4"], [0, "celá část"]].map(([v, n]) => `<option value="${v}"${v === (S.pl ?? 2) ? " selected" : ""}>${n}</option>`).join("")}</select></label>
-<div class="seq"><button class="btn ac" data-s="pfs">Kopírovat pro FreeShow</button><button class="btn" data-s="pdl">Stáhnout .show</button><button class="btn pp" data-s="ppt"><img src="data:image/png;base64,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" alt="">PowerPoint</button></div><p class="info" id="pm">Pro FreeShow: zkopíruj a ve FreeShow stiskni Ctrl+Alt+I. Text se kopíruje bez akordů a značek.</p></div>`}
+<div class="seq"><button class="btn ac" data-s="pfs">Kopírovat pro FreeShow</button><button class="btn pp" data-s="ppt">PowerPoint</button></div><p class="info" id="pm">Pro FreeShow: zkopíruj a ve FreeShow stiskni Ctrl+Alt+I. Text se kopíruje bez akordů a značek.</p></div>`}
                 pr = `<div class="prb"><button class="btn" data-s="pr">Přidat do prezentace ${S.pres ? "▴" : "▾"}</button></div>` + pr
             }
             const f = firstChord(s.text), p0 = f ? pcOf(f) : 0; S.p0 = p0; const cur = ((p0 + S.tr) % 12 + 12) % 12;
             const tp = f ? `<div class="tp"><button class="btn" data-s="tm">−1</button><button class="btn" data-s="tk">${esc(tchord(f, S.tr))} ▾</button><button class="btn" data-s="tp">+1</button>${S.pop ? `<div class="pop">${NM.map((n, k) => `<button class="btn${k === cur ? " on" : ""}" data-s="key" data-k="${k}">${n}</button>`).join("")}</div>` : ""}</div>` : "";
-            const hasMultiVerse = /\{V2\}/i.test(s.text);
             m.innerHTML = `<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(s.text, S.tr)}</pre>${pr}<div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;
             fixChordCollisions();
             return
@@ -248,11 +179,10 @@ async function songAct(t) {
         pm.textContent = "Vytvářím PowerPoint…";
         try { await mkPptx(so, ps, S.seq, S.pl ?? 2, (so.title.replace(/[\\/:*?"<>|]+/g, "").trim() || "pisnicka") + ".pptx"); pm.textContent = "PowerPoint stažen." } catch (e) { pm.textContent = "PowerPoint se nepodařilo vytvořit: " + (e.message || e) }
     }
-    else if (a === "pdl" || a === "pfs") {
+    else if (a === "pfs") {
         const so = songs.find(x => x.id === S.song), ps = parts(so.text), pm = $("#pm");
         if (!S.seq.length) { pm.textContent = "Přidej aspoň jednu část."; return }
-        if (a === "pfs") { pm.textContent = (await copyText(qlText(so, ps, S.seq, S.pl ?? 2))) ? "Zkopírováno. Ve FreeShow stiskni Ctrl+Alt+I (Cmd+Option+I na Macu)." : "Kopírování se nepovedlo." }
-        else { dl((so.title.replace(/[\\/:*?"<>|]+/g, "").trim() || "pisnicka") + ".show", JSON.stringify(fsShow(so, ps, S.seq, S.pl ?? 2), null, 1)); pm.textContent = "Soubor .show stažen. Pokud ho FreeShow nepřijme, použij Kopírovat pro FreeShow." }
+        pm.textContent = (await copyText(qlText(so, ps, S.seq, S.pl ?? 2))) ? "Zkopírováno. Ve FreeShow stiskni Ctrl+Alt+I (Cmd+Option+I na Macu)." : "Kopírování se nepovedlo."
     }
     else if (a === "aip") { const p = $("#aipin"); if (p && p.value) ls("pin", p.value); if (!ls("pin")) { toast("Nejdřív zadej PIN."); return } $("#aif").click() }
     else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; S.edit = { title: d.title, author: d.author, text: d.text }; S.draft = id; await renderSongs(); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
@@ -267,14 +197,6 @@ async function songAct(t) {
         if (!s.id) s.id = Date.now().toString(36); if (!s.slug) s.slug = uniqueSlug(s.title, s.id); if (API) ls("pin", $("#sp").value); $("#sm").textContent = "Ukládám…";
         try { S.msg = await store("save", s); if (S.draft) { drafts = drafts.filter(x => x.id !== S.draft); saveDrafts(); S.draft = null } S.edit = null; S.song = s.id; S.tr = 0; S.pres = false; setUrl(songs.find(x => x.id === s.id), true); renderSongs() } catch (e) { $("#sm").textContent = "Nepodařilo se uložit: " + e.message }
     }
-    else if (a === "syncv") {
-        const s = songs.find(x => x.id === id); if (!s) return;
-        const nt = syncVersesFromV1(s.text);
-        if (nt === s.text) { mvToast("Sloky jsou už synchronizované."); return }
-        const old = s.text; s.text = nt; renderSongs();
-        try { const msg = await store("save", { ...s, text: nt }); mvToast("Sloky synchronizovány. " + msg) }
-        catch (err) { const s2 = songs.find(x => x.id === id); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
-    }
     else if (a === "del") { t.parentElement.innerHTML = (API ? `<input class="f1" id="dp" type="password" placeholder="PIN" style="max-width:180px;margin:0">` : "") + `<button class="btn ac" data-s="del2" data-id="${esc(id)}">Smazat</button><button class="btn" data-s="open" data-id="${esc(id)}">Zrušit</button>`; const d = $("#dp"); if (d) d.focus() }
     else if (a === "del2") {
         const d = $("#dp"), old = ls("pin"); if (d) ls("pin", d.value); let ok = true;
@@ -283,238 +205,348 @@ async function songAct(t) {
     }
 }
 document.addEventListener("click", e => {
-    // close chord diagram popup on outside click
     if (document.querySelector(".cdpop") && !e.target.closest(".cdpop,.cc")) closeChordPop();
     if (S.pop && !e.target.closest(".pop,[data-s=tk]")) { S.pop = false; const q = document.querySelector(".pop"); if (q) q.remove() }
-    // chord label click → show diagram popup
     if (e.target.closest(".cc")) { const cc = e.target.closest(".cc"); openChordPop(cc, cc.dataset.chord); return; }
     const t = e.target.closest("[data-s],#fs,#th"); if (!t) return;
     if (t.dataset.s) songAct(t);
     else if (t.id === "fs") { const r = document.documentElement, v = parseInt(getComputedStyle(r).getPropertyValue("--fs")); r.style.setProperty("--fs", (v >= 26 ? 16 : v + 2) + "px"); fixChordCollisions(); }
     else if (t.id === "th") { const r = document.documentElement, d = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme:dark)").matches; const next = d ? "light" : "dark"; r.dataset.theme = next; localStorage.setItem("theme", next) }
 });
+
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeChordPop() });
 
 // ---- Chord diagram popup ----
-// Instrument tab preference
 let cdTab = ls("cdTab") || "guitar";
+if (!["guitar", "ukulele", "piano"].includes(cdTab)) cdTab = "guitar";
 
-// Chord database: [frets per string (low→high), fingers (0=open,-1=mute)]
-// Guitar: 6 strings E A D G B e (low to high)
-// Ukulele: 4 strings G C E A
+// Akordy se hledají přes pcOfChord/chordKey: české B = Bb, H = h; enharmonické názvy (Db, Gb, Ab, Hmi, A2…) se převedou na tyto klíče.
+// Tvary: [pražce po strunách odspodu, "x" = nehrát, 0 = prázdná], b = první zobrazený pražec.
+const ROOT_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "Bb", "H"];
 const GUITAR_CHORDS = {
     "C": { f: ["x", 3, 2, 0, 1, 0], b: 0 },
-    "C#": { f: ["x", 4, 3, 1, 2, 1], b: 0 },
-    "Db": { f: ["x", 4, 3, 1, 2, 1], b: 0 },
-    "D": { f: ["x", "x", 0, 2, 3, 2], b: 0 },
-    "D#": { f: ["x", "x", 1, 3, 4, 3], b: 0 },
-    "Eb": { f: ["x", "x", 1, 3, 4, 3], b: 0 },
-    "E": { f: [0, 2, 2, 1, 0, 0], b: 0 },
-    "F": { f: [1, 1, 2, 3, 3, 1], b: 1 },
-    "F#": { f: [2, 2, 3, 4, 4, 2], b: 2 },
-    "Gb": { f: [2, 2, 3, 4, 4, 2], b: 2 },
-    "G": { f: [3, 2, 0, 0, 0, 3], b: 0 },
-    "G#": { f: [4, 3, 1, 1, 1, 4], b: 0 },
-    "Ab": { f: [4, 3, 1, 1, 1, 4], b: 0 },
-    "A": { f: ["x", 0, 2, 2, 2, 0], b: 0 },
-    "B": { f: ["x", 2, 4, 4, 4, 2], b: 0 },
-    "H": { f: ["x", 2, 4, 4, 4, 2], b: 0 },
-    "A#": { f: [1, 1, 3, 3, 3, 1], b: 1 },
-    "Bb": { f: [1, 1, 3, 3, 3, 1], b: 1 },
     "Cm": { f: ["x", 3, 5, 5, 4, 3], b: 3 },
-    "C#m": { f: ["x", 4, 6, 6, 5, 4], b: 4 },
-    "Dbm": { f: ["x", 4, 6, 6, 5, 4], b: 4 },
-    "Dm": { f: ["x", "x", 0, 2, 3, 1], b: 0 },
-    "D#m": { f: ["x", "x", 1, 3, 4, 2], b: 0 },
-    "Ebm": { f: ["x", "x", 1, 3, 4, 2], b: 0 },
-    "Em": { f: [0, 2, 2, 0, 0, 0], b: 0 },
-    "Fm": { f: [1, 3, 3, 1, 1, 1], b: 1 },
-    "F#m": { f: [2, 4, 4, 2, 2, 2], b: 2 },
-    "Gbm": { f: [2, 4, 4, 2, 2, 2], b: 2 },
-    "Gm": { f: [3, 5, 5, 3, 3, 3], b: 3 },
-    "G#m": { f: [4, 6, 6, 4, 4, 4], b: 4 },
-    "Abm": { f: [4, 6, 6, 4, 4, 4], b: 4 },
-    "Am": { f: ["x", 0, 2, 2, 1, 0], b: 0 },
-    "A#m": { f: [1, 3, 3, 2, 1, 1], b: 1 },
-    "Bbm": { f: [1, 3, 3, 2, 1, 1], b: 1 },
-    "Bm": { f: ["x", 2, 4, 4, 3, 2], b: 2 },
-    "Hm": { f: ["x", 2, 4, 4, 3, 2], b: 2 },
     "C7": { f: ["x", 3, 2, 3, 1, 0], b: 0 },
-    "D7": { f: ["x", "x", 0, 2, 1, 2], b: 0 },
-    "E7": { f: [0, 2, 0, 1, 0, 0], b: 0 },
-    "F7": { f: [1, 1, 2, 1, 3, 1], b: 1 },
-    "G7": { f: [3, 2, 0, 0, 0, 1], b: 0 },
-    "A7": { f: ["x", 0, 2, 0, 2, 0], b: 0 },
-    "B7": { f: ["x", 2, 1, 2, 0, 2], b: 0 },
-    "H7": { f: ["x", 2, 1, 2, 0, 2], b: 0 },
-    "Cmaj7": { f: ["x", 3, 2, 0, 0, 0], b: 0 },
-    "Dmaj7": { f: ["x", "x", 0, 2, 2, 2], b: 0 },
-    "Emaj7": { f: [0, 2, 2, 1, 0, 0], b: 0 },
-    "Fmaj7": { f: ["x", "x", 3, 2, 1, 0], b: 0 },
-    "Gmaj7": { f: [3, 2, 0, 0, 0, 2], b: 0 },
-    "Amaj7": { f: ["x", 0, 2, 1, 2, 0], b: 0 },
-    "Bmaj7": { f: ["x", 2, 4, 3, 4, 2], b: 0 },
-    "Hmaj7": { f: ["x", 2, 4, 3, 4, 2], b: 0 },
     "Cm7": { f: ["x", 3, 5, 3, 4, 3], b: 3 },
-    "Dm7": { f: ["x", "x", 0, 2, 1, 1], b: 0 },
-    "Em7": { f: [0, 2, 0, 0, 0, 0], b: 0 },
-    "Fm7": { f: [1, 3, 1, 1, 1, 1], b: 1 },
-    "Gm7": { f: [3, 5, 3, 3, 3, 3], b: 3 },
-    "Am7": { f: ["x", 0, 2, 0, 1, 0], b: 0 },
-    "Bm7": { f: ["x", 2, 4, 2, 3, 2], b: 2 },
-    "Hm7": { f: ["x", 2, 4, 2, 3, 2], b: 2 },
+    "Cmaj7": { f: ["x", 3, 2, 0, 0, 0], b: 0 },
     "Csus4": { f: ["x", 3, 3, 0, 1, 1], b: 0 },
-    "Dsus4": { f: ["x", "x", 0, 2, 3, 3], b: 0 },
-    "Esus4": { f: [0, 2, 2, 2, 0, 0], b: 0 },
-    "Gsus4": { f: [3, 3, 0, 0, 1, 3], b: 0 },
-    "Asus4": { f: ["x", 0, 2, 2, 3, 0], b: 0 },
-    "Csus2": { f: ["x", 3, 3, 0, 3, 3], b: 0 },
-    "Dsus2": { f: ["x", "x", 0, 2, 3, 0], b: 0 },
-    "Esus2": { f: [0, 2, 4, 4, 0, 0], b: 0 },
-    "Gsus2": { f: [3, 2, 0, 0, 3, 3], b: 0 },
-    "Asus2": { f: ["x", 0, 2, 2, 0, 0], b: 0 },
+    "Csus2": { f: ["x", 3, 0, 0, 1, "x"], b: 0 },
     "Cdim": { f: ["x", 3, 4, 5, 4, "x"], b: 0 },
-    "Ddim": { f: ["x", "x", 0, 1, 0, 1], b: 0 },
-    "Edim": { f: [0, 1, 2, 3, "x", "x"], b: 0 },
-    "Fdim": { f: [1, 2, 3, 4, "x", "x"], b: 1 },
-    "Gdim": { f: [3, 4, 5, 3, "x", "x"], b: 3 },
-    "Adim": { f: ["x", 0, 1, 2, 1, "x"], b: 0 },
-    "Bdim": { f: ["x", 2, 3, 4, 3, "x"], b: 2 },
-    "Hdim": { f: ["x", 2, 3, 4, 3, "x"], b: 2 },
     "Caug": { f: ["x", 3, 2, 1, 1, 0], b: 0 },
+    "Cadd9": { f: ["x", 3, 0, 0, 1, 0], b: 0 },
+    "C6": { f: ["x", 3, 2, 2, 1, 0], b: 0 },
+    "Cm6": { f: ["x", 3, 1, 2, 1, "x"], b: 0 },
+    "C#": { f: ["x", 4, 3, 1, 2, 1], b: 0 },
+    "C#m": { f: ["x", 4, 6, 6, 5, 4], b: 4 },
+    "C#7": { f: ["x", 4, 3, 4, 0, "x"], b: 0 },
+    "C#m7": { f: ["x", 4, 2, 4, 0, 0], b: 0 },
+    "C#maj7": { f: ["x", 4, 3, 1, 1, 1], b: 0 },
+    "C#sus4": { f: ["x", 4, 4, 1, 2, "x"], b: 0 },
+    "C#sus2": { f: ["x", 4, 1, 1, 2, "x"], b: 0 },
+    "C#dim": { f: [0, 4, 2, 0, "x", "x"], b: 0 },
+    "C#aug": { f: ["x", 4, 3, 2, 2, "x"], b: 2 },
+    "C#add9": { f: ["x", 4, 1, 1, 2, 1], b: 0 },
+    "C#6": { f: ["x", 4, 3, 3, 2, "x"], b: 2 },
+    "C#m6": { f: [0, 1, 2, 1, 2, 0], b: 0 },
+    "D": { f: ["x", "x", 0, 2, 3, 2], b: 0 },
+    "Dm": { f: ["x", "x", 0, 2, 3, 1], b: 0 },
+    "D7": { f: ["x", "x", 0, 2, 1, 2], b: 0 },
+    "Dm7": { f: ["x", "x", 0, 2, 1, 1], b: 0 },
+    "Dmaj7": { f: ["x", "x", 0, 2, 2, 2], b: 0 },
+    "Dsus4": { f: ["x", "x", 0, 2, 3, 3], b: 0 },
+    "Dsus2": { f: ["x", "x", 0, 2, 3, 0], b: 0 },
+    "Ddim": { f: ["x", "x", 0, 1, 3, 1], b: 0 },
     "Daug": { f: ["x", "x", 0, 3, 3, 2], b: 0 },
+    "Dadd9": { f: [0, 0, 0, 2, 3, 2], b: 0 },
+    "D6": { f: ["x", "x", 0, 4, 0, 2], b: 0 },
+    "Dm6": { f: ["x", "x", 0, 2, 0, 1], b: 0 },
+    "D#": { f: ["x", "x", 1, 3, 4, 3], b: 0 },
+    "D#m": { f: ["x", "x", 1, 3, 4, 2], b: 0 },
+    "D#7": { f: ["x", "x", 1, 0, 2, 3], b: 0 },
+    "D#m7": { f: ["x", "x", 1, 3, 2, 2], b: 0 },
+    "D#maj7": { f: ["x", "x", 1, 0, 3, 3], b: 0 },
+    "D#sus4": { f: ["x", "x", 1, 3, 4, 4], b: 0 },
+    "D#sus2": { f: ["x", "x", 1, 3, 4, 1], b: 0 },
+    "D#dim": { f: [2, 0, 1, 2, "x", "x"], b: 0 },
+    "D#aug": { f: ["x", "x", 1, 0, 0, 3], b: 0 },
+    "D#add9": { f: [1, 1, 1, 0, "x", "x"], b: 0 },
+    "D#6": { f: ["x", "x", 1, 3, 1, 3], b: 0 },
+    "D#m6": { f: ["x", "x", 1, 3, 1, 2], b: 0 },
+    "E": { f: [0, 2, 2, 1, 0, 0], b: 0 },
+    "Em": { f: [0, 2, 2, 0, 0, 0], b: 0 },
+    "E7": { f: [0, 2, 0, 1, 0, 0], b: 0 },
+    "Em7": { f: [0, 2, 0, 0, 0, 0], b: 0 },
+    "Emaj7": { f: [0, 2, 1, 1, 0, 0], b: 0 },
+    "Esus4": { f: [0, 2, 2, 2, 0, 0], b: 0 },
+    "Esus2": { f: [0, 2, 4, 4, 0, 0], b: 0 },
+    "Edim": { f: [0, 1, 2, 0, "x", "x"], b: 0 },
     "Eaug": { f: [0, 3, 2, 1, 1, 0], b: 0 },
+    "Eadd9": { f: [0, 2, 2, 1, 0, 2], b: 0 },
+    "E6": { f: [0, 2, 2, 1, 2, 0], b: 0 },
+    "Em6": { f: [0, 4, 2, 0, 0, 0], b: 0 },
+    "F": { f: [1, 3, 3, 2, 1, 1], b: 0 },
+    "Fm": { f: [1, 3, 3, 1, 1, 1], b: 1 },
+    "F7": { f: [1, 3, 1, 2, 1, 1], b: 0 },
+    "Fm7": { f: [1, 3, 1, 1, 1, 1], b: 1 },
+    "Fmaj7": { f: ["x", "x", 3, 2, 1, 0], b: 0 },
+    "Fsus4": { f: [1, 1, 3, 3, 1, 1], b: 0 },
+    "Fsus2": { f: ["x", "x", 3, 0, 1, 1], b: 0 },
+    "Fdim": { f: [1, 2, 3, 1, 0, "x"], b: 0 },
     "Faug": { f: [1, 0, 3, 2, 2, 1], b: 0 },
+    "Fadd9": { f: [1, 0, 3, 0, "x", "x"], b: 0 },
+    "F6": { f: [1, 0, 0, 2, "x", "x"], b: 0 },
+    "Fm6": { f: ["x", "x", 0, 1, 1, 1], b: 0 },
+    "F#": { f: [2, 4, 4, 3, 2, 2], b: 2 },
+    "F#m": { f: [2, 4, 4, 2, 2, 2], b: 2 },
+    "F#7": { f: [2, 1, 2, 3, "x", "x"], b: 0 },
+    "F#m7": { f: [0, 0, 2, 2, 2, 2], b: 0 },
+    "F#maj7": { f: [2, 1, 3, 3, "x", "x"], b: 0 },
+    "F#sus4": { f: [2, 2, 4, 4, 2, 2], b: 2 },
+    "F#sus2": { f: ["x", "x", 4, 1, 2, 2], b: 0 },
+    "F#dim": { f: [2, 3, 4, 2, "x", "x"], b: 2 },
+    "F#aug": { f: [2, 1, 0, 3, "x", "x"], b: 0 },
+    "F#add9": { f: [2, 1, 4, 1, "x", "x"], b: 0 },
+    "F#6": { f: [2, 1, 1, 3, "x", "x"], b: 0 },
+    "F#m6": { f: [2, 0, 1, 2, "x", "x"], b: 0 },
+    "G": { f: [3, 2, 0, 0, 0, 3], b: 0 },
+    "Gm": { f: [3, 5, 5, 3, 3, 3], b: 3 },
+    "G7": { f: [3, 2, 0, 0, 0, 1], b: 0 },
+    "Gm7": { f: [3, 5, 3, 3, 3, 3], b: 3 },
+    "Gmaj7": { f: [3, 2, 0, 0, 0, 2], b: 0 },
+    "Gsus4": { f: [3, 3, 0, 0, 1, 3], b: 0 },
+    "Gsus2": { f: [3, 0, 0, 0, "x", "x"], b: 0 },
+    "Gdim": { f: [3, 4, 5, 3, "x", "x"], b: 3 },
     "Gaug": { f: [3, 2, 1, 0, 0, 3], b: 0 },
+    "Gadd9": { f: ["x", 0, 0, 0, 0, "x"], b: 0 },
+    "G6": { f: ["x", "x", 0, 0, 0, 0], b: 0 },
+    "Gm6": { f: [0, 1, 0, 0, "x", "x"], b: 0 },
+    "G#": { f: [4, 3, 1, 1, 1, 4], b: 0 },
+    "G#m": { f: [4, 6, 6, 4, 4, 4], b: 4 },
+    "G#7": { f: ["x", "x", 1, 1, 1, 2], b: 0 },
+    "G#m7": { f: ["x", "x", 1, 1, 0, 2], b: 0 },
+    "G#maj7": { f: [4, 3, 1, 0, "x", "x"], b: 0 },
+    "G#sus4": { f: [4, 4, 1, 1, "x", "x"], b: 0 },
+    "G#sus2": { f: [4, 1, 1, 1, "x", "x"], b: 0 },
+    "G#dim": { f: [4, 2, 0, 4, 0, "x"], b: 0 },
+    "G#aug": { f: ["x", "x", 2, 1, 1, 0], b: 0 },
+    "G#add9": { f: ["x", 1, 1, 1, 1, "x"], b: 0 },
+    "G#6": { f: ["x", "x", 1, 1, 1, 1], b: 0 },
+    "G#m6": { f: [1, 2, 1, 1, 0, "x"], b: 0 },
+    "A": { f: ["x", 0, 2, 2, 2, 0], b: 0 },
+    "Am": { f: ["x", 0, 2, 2, 1, 0], b: 0 },
+    "A7": { f: ["x", 0, 2, 0, 2, 0], b: 0 },
+    "Am7": { f: ["x", 0, 2, 0, 1, 0], b: 0 },
+    "Amaj7": { f: ["x", 0, 2, 1, 2, 0], b: 0 },
+    "Asus4": { f: ["x", 0, 2, 2, 3, 0], b: 0 },
+    "Asus2": { f: ["x", 0, 2, 2, 0, 0], b: 0 },
+    "Adim": { f: ["x", 0, 1, 2, 1, "x"], b: 0 },
     "Aaug": { f: ["x", 0, 3, 2, 2, 1], b: 0 },
-    "Baug": { f: ["x", 2, 1, 0, 0, 3], b: 0 },
+    "Aadd9": { f: [0, 2, 2, 2, 2, 0], b: 0 },
+    "A6": { f: ["x", 0, 2, 2, 2, 2], b: 0 },
+    "Am6": { f: ["x", 0, 2, 2, 1, 2], b: 0 },
+    "Bb": { f: [1, 1, 3, 3, 3, 1], b: 1 },
+    "Bbm": { f: ["x", 1, 3, 3, 2, 1], b: 0 },
+    "Bb7": { f: ["x", 1, 3, 1, 3, 1], b: 0 },
+    "Bbm7": { f: ["x", 1, 3, 1, 2, 1], b: 0 },
+    "Bbmaj7": { f: ["x", 1, 0, 2, 3, "x"], b: 0 },
+    "Bbsus4": { f: ["x", 1, 1, 3, 4, 1], b: 0 },
+    "Bbsus2": { f: ["x", 1, 3, 3, 1, 1], b: 0 },
+    "Bbdim": { f: ["x", 1, 2, 3, 2, 0], b: 0 },
+    "Bbaug": { f: ["x", 1, 0, 3, 3, 2], b: 0 },
+    "Bbadd9": { f: ["x", 3, 3, 3, 3, "x"], b: 3 },
+    "Bb6": { f: [1, 1, 0, 0, "x", "x"], b: 0 },
+    "Bbm6": { f: ["x", 1, 3, 0, 2, "x"], b: 0 },
+    "H": { f: ["x", 2, 4, 4, 4, 2], b: 0 },
+    "Hm": { f: ["x", 2, 4, 4, 3, 2], b: 2 },
+    "H7": { f: ["x", 2, 1, 2, 0, 2], b: 0 },
+    "Hm7": { f: ["x", 2, 4, 2, 3, 2], b: 2 },
+    "Hmaj7": { f: ["x", 2, 4, 3, 4, 2], b: 0 },
+    "Hsus4": { f: ["x", 2, 4, 4, 0, 0], b: 0 },
+    "Hsus2": { f: ["x", 2, 4, 4, 2, 2], b: 2 },
+    "Hdim": { f: ["x", 2, 3, 4, 3, "x"], b: 2 },
     "Haug": { f: ["x", 2, 1, 0, 0, 3], b: 0 },
+    "Hadd9": { f: ["x", 2, 1, 4, 2, "x"], b: 0 },
+    "H6": { f: ["x", 2, 1, 1, 0, "x"], b: 0 },
+    "Hm6": { f: ["x", 2, 0, 1, 0, "x"], b: 0 },
 };
 
 const UKE_CHORDS = {
     "C": { f: [0, 0, 0, 3], b: 0 },
-    "C#": { f: [1, 1, 1, 4], b: 0 },
-    "Db": { f: [1, 1, 1, 4], b: 0 },
-    "D": { f: [2, 2, 2, 0], b: 0 },
-    "D#": { f: [3, 3, 3, 1], b: 0 },
-    "Eb": { f: [3, 3, 3, 1], b: 0 },
-    "E": { f: [4, 4, 4, 2], b: 0 },
-    "F": { f: [2, 0, 1, 0], b: 0 },
-    "F#": { f: [3, 1, 2, 1], b: 0 },
-    "Gb": { f: [3, 1, 2, 1], b: 0 },
-    "G": { f: [0, 2, 3, 2], b: 0 },
-    "G#": { f: [5, 3, 4, 3], b: 3 },
-    "Ab": { f: [5, 3, 4, 3], b: 3 },
-    "A": { f: [2, 1, 0, 0], b: 0 },
-    "B": { f: [4, 3, 2, 2], b: 0 },
-    "H": { f: [4, 3, 2, 2], b: 0 },
-    "A#": { f: [3, 2, 1, 1], b: 0 },
-    "Bb": { f: [3, 2, 1, 1], b: 0 },
     "Cm": { f: [0, 3, 3, 3], b: 0 },
-    "C#m": { f: [1, 1, 0, 4], b: 0 },
-    "Dbm": { f: [1, 1, 0, 4], b: 0 },
-    "Dm": { f: [2, 2, 1, 0], b: 0 },
-    "D#m": { f: [3, 3, 2, 1], b: 0 },
-    "Ebm": { f: [3, 3, 2, 1], b: 0 },
-    "Em": { f: [0, 4, 3, 2], b: 0 },
-    "Fm": { f: [1, 0, 1, 3], b: 0 },
-    "F#m": { f: [2, 1, 2, 0], b: 0 },
-    "Gbm": { f: [2, 1, 2, 0], b: 0 },
-    "Gm": { f: [0, 2, 3, 1], b: 0 },
-    "G#m": { f: [4, 3, 4, 2], b: 0 },
-    "Abm": { f: [4, 3, 4, 2], b: 0 },
-    "Am": { f: [2, 0, 0, 0], b: 0 },
-    "A#m": { f: [3, 1, 1, 1], b: 0 },
-    "Bbm": { f: [3, 1, 1, 1], b: 0 },
-    "Bm": { f: [4, 2, 2, 2], b: 0 },
-    "Hm": { f: [4, 2, 2, 2], b: 0 },
     "C7": { f: [0, 0, 0, 1], b: 0 },
-    "D7": { f: [2, 2, 2, 3], b: 0 },
-    "E7": { f: [1, 2, 0, 2], b: 0 },
-    "F7": { f: [2, 3, 1, 0], b: 0 },
-    "G7": { f: [0, 2, 1, 2], b: 0 },
-    "A7": { f: [0, 1, 0, 0], b: 0 },
-    "B7": { f: [2, 3, 2, 2], b: 0 },
-    "H7": { f: [2, 3, 2, 2], b: 0 },
+    "Cm7": { f: [3, 3, 3, 3], b: 3 },
     "Cmaj7": { f: [0, 0, 0, 2], b: 0 },
-    "Dmaj7": { f: [2, 2, 2, 4], b: 0 },
-    "Emaj7": { f: [1, 3, 0, 2], b: 0 },
-    "Fmaj7": { f: [2, 4, 1, 0], b: 0 },
-    "Gmaj7": { f: [0, 2, 2, 2], b: 0 },
-    "Amaj7": { f: [1, 1, 0, 0], b: 0 },
-    "Bmaj7": { f: [3, 3, 2, 2], b: 0 },
-    "Hmaj7": { f: [3, 3, 2, 2], b: 0 },
-    "Cm7": { f: [0, 3, 3, 3], b: 0 },
-    "Dm7": { f: [2, 2, 1, 3], b: 0 },
-    "Em7": { f: [0, 2, 0, 2], b: 0 },
-    "Fm7": { f: [1, 3, 1, 3], b: 0 },
-    "Gm7": { f: [0, 2, 1, 1], b: 0 },
-    "Am7": { f: [0, 0, 0, 0], b: 0 },
-    "Bm7": { f: [2, 2, 2, 2], b: 0 },
-    "Hm7": { f: [2, 2, 2, 2], b: 0 },
     "Csus4": { f: [0, 0, 1, 3], b: 0 },
-    "Dsus4": { f: [0, 2, 3, 0], b: 0 },
-    "Gsus4": { f: [0, 2, 3, 3], b: 0 },
-    "Asus4": { f: [2, 2, 0, 0], b: 0 },
     "Csus2": { f: [0, 2, 3, 3], b: 0 },
-    "Dsus2": { f: [2, 2, 2, 5], b: 0 },
-    "Cdim": { f: [2, 3, 2, 3], b: 0 },
-    "Ddim": { f: [1, 2, 1, 2], b: 0 },
-    "Edim": { f: [0, 1, 0, 1], b: 0 },
-    "Fdim": { f: [1, 0, 1, 2], b: 0 },
-    "Gdim": { f: [0, 1, 3, 1], b: 0 },
-    "Adim": { f: [2, 3, 2, 0], b: 0 },
-    "Bdim": { f: [3, 1, 0, 1], b: 0 },
-    "Hdim": { f: [3, 1, 0, 1], b: 0 },
+    "Cdim": { f: [5, 3, 2, 3], b: 2 },
     "Caug": { f: [1, 0, 0, 3], b: 0 },
+    "Cadd9": { f: [0, 2, 0, 3], b: 0 },
+    "C6": { f: [0, 0, 0, 0], b: 0 },
+    "Cm6": { f: [2, 3, 3, 3], b: 2 },
+    "C#": { f: [1, 1, 1, 4], b: 0 },
+    "C#m": { f: [1, 1, 0, 4], b: 0 },
+    "C#7": { f: [1, 1, 1, 2], b: 0 },
+    "C#m7": { f: [1, 1, 0, 2], b: 0 },
+    "C#maj7": { f: [1, 1, 1, 3], b: 0 },
+    "C#sus4": { f: [1, 1, 2, 4], b: 0 },
+    "C#sus2": { f: [1, 3, 4, 4], b: 0 },
+    "C#dim": { f: [0, 1, 0, 4], b: 0 },
+    "C#aug": { f: [2, 1, 1, 0], b: 0 },
+    "C#add9": { f: [1, 3, 1, 4], b: 0 },
+    "C#6": { f: [1, 1, 1, 1], b: 0 },
+    "C#m6": { f: [3, 4, 0, 4], b: 0 },
+    "D": { f: [2, 2, 2, 0], b: 0 },
+    "Dm": { f: [2, 2, 1, 0], b: 0 },
+    "D7": { f: [2, 2, 2, 3], b: 0 },
+    "Dm7": { f: [2, 2, 1, 3], b: 0 },
+    "Dmaj7": { f: [2, 2, 2, 4], b: 0 },
+    "Dsus4": { f: [0, 2, 3, 0], b: 0 },
+    "Dsus2": { f: [2, 2, 0, 0], b: 0 },
+    "Ddim": { f: [7, 5, 4, 5], b: 4 },
     "Daug": { f: [3, 2, 2, 1], b: 0 },
+    "Dadd9": { f: [2, 4, 2, 5], b: 2 },
+    "D6": { f: [2, 2, 2, 2], b: 2 },
+    "Dm6": { f: [2, 2, 1, 2], b: 0 },
+    "D#": { f: [3, 3, 3, 1], b: 0 },
+    "D#m": { f: [3, 3, 2, 1], b: 0 },
+    "D#7": { f: [0, 3, 3, 4], b: 0 },
+    "D#m7": { f: [3, 3, 2, 4], b: 2 },
+    "D#maj7": { f: [3, 3, 3, 5], b: 3 },
+    "D#sus4": { f: [1, 3, 4, 1], b: 0 },
+    "D#sus2": { f: [3, 3, 1, 1], b: 0 },
+    "D#dim": { f: [2, 3, 2, 0], b: 0 },
+    "D#aug": { f: [0, 3, 3, 2], b: 0 },
+    "D#add9": { f: [0, 3, 1, 1], b: 0 },
+    "D#6": { f: [0, 3, 3, 3], b: 0 },
+    "D#m6": { f: [3, 3, 2, 3], b: 2 },
+    "E": { f: [4, 4, 4, 2], b: 0 },
+    "Em": { f: [0, 4, 3, 2], b: 0 },
+    "E7": { f: [1, 2, 0, 2], b: 0 },
+    "Em7": { f: [0, 2, 0, 2], b: 0 },
+    "Emaj7": { f: [1, 3, 0, 2], b: 0 },
+    "Esus4": { f: [4, 4, 0, 0], b: 0 },
+    "Esus2": { f: [4, 4, 2, 2], b: 2 },
+    "Edim": { f: [0, 4, 0, 1], b: 0 },
     "Eaug": { f: [1, 0, 0, 3], b: 0 },
+    "Eadd9": { f: [1, 4, 2, 2], b: 0 },
+    "E6": { f: [1, 1, 0, 2], b: 0 },
+    "Em6": { f: [0, 1, 0, 2], b: 0 },
+    "F": { f: [2, 0, 1, 0], b: 0 },
+    "Fm": { f: [1, 0, 1, 3], b: 0 },
+    "F7": { f: [2, 3, 1, 0], b: 0 },
+    "Fm7": { f: [1, 3, 1, 3], b: 0 },
+    "Fmaj7": { f: [2, 4, 1, 0], b: 0 },
+    "Fsus4": { f: [3, 0, 1, 1], b: 0 },
+    "Fsus2": { f: [0, 0, 1, 3], b: 0 },
+    "Fdim": { f: [4, 5, 4, 2], b: 2 },
     "Faug": { f: [2, 1, 1, 0], b: 0 },
+    "Fadd9": { f: [0, 0, 1, 0], b: 0 },
+    "F6": { f: [2, 2, 1, 0], b: 0 },
+    "Fm6": { f: [1, 2, 1, 3], b: 0 },
+    "F#": { f: [3, 1, 2, 1], b: 0 },
+    "F#m": { f: [2, 1, 2, 0], b: 0 },
+    "F#7": { f: [3, 4, 2, 4], b: 2 },
+    "F#m7": { f: [2, 4, 2, 0], b: 0 },
+    "F#maj7": { f: [3, 5, 2, 4], b: 2 },
+    "F#sus4": { f: [4, 1, 2, 2], b: 0 },
+    "F#sus2": { f: [1, 1, 2, 4], b: 0 },
+    "F#dim": { f: [5, 6, 5, 3], b: 3 },
+    "F#aug": { f: [3, 2, 2, 1], b: 0 },
+    "F#add9": { f: [1, 1, 2, 1], b: 0 },
+    "F#6": { f: [3, 3, 2, 1], b: 0 },
+    "F#m6": { f: [2, 3, 2, 0], b: 0 },
+    "G": { f: [0, 2, 3, 2], b: 0 },
+    "Gm": { f: [0, 2, 3, 1], b: 0 },
+    "G7": { f: [0, 2, 1, 2], b: 0 },
+    "Gm7": { f: [0, 2, 1, 1], b: 0 },
+    "Gmaj7": { f: [0, 2, 2, 2], b: 0 },
+    "Gsus4": { f: [0, 2, 3, 3], b: 0 },
+    "Gsus2": { f: [0, 2, 3, 0], b: 0 },
+    "Gdim": { f: [0, 1, 3, 1], b: 0 },
     "Gaug": { f: [0, 3, 3, 2], b: 0 },
+    "Gadd9": { f: [2, 2, 3, 2], b: 2 },
+    "G6": { f: [0, 4, 0, 2], b: 0 },
+    "Gm6": { f: [0, 2, 0, 1], b: 0 },
+    "G#": { f: [5, 3, 4, 3], b: 3 },
+    "G#m": { f: [4, 3, 4, 2], b: 0 },
+    "G#7": { f: [1, 0, 2, 3], b: 0 },
+    "G#m7": { f: [1, 3, 2, 2], b: 0 },
+    "G#maj7": { f: [1, 0, 3, 3], b: 0 },
+    "G#sus4": { f: [1, 3, 4, 4], b: 0 },
+    "G#sus2": { f: [1, 3, 4, 1], b: 0 },
+    "G#dim": { f: [4, 2, 4, 2], b: 2 },
+    "G#aug": { f: [1, 0, 0, 3], b: 0 },
+    "G#add9": { f: [3, 3, 4, 3], b: 3 },
+    "G#6": { f: [1, 3, 1, 3], b: 0 },
+    "G#m6": { f: [1, 3, 1, 2], b: 0 },
+    "A": { f: [2, 1, 0, 0], b: 0 },
+    "Am": { f: [2, 0, 0, 0], b: 0 },
+    "A7": { f: [0, 1, 0, 0], b: 0 },
+    "Am7": { f: [0, 0, 0, 0], b: 0 },
+    "Amaj7": { f: [1, 1, 0, 0], b: 0 },
+    "Asus4": { f: [2, 2, 0, 0], b: 0 },
+    "Asus2": { f: [4, 4, 0, 0], b: 0 },
+    "Adim": { f: [5, 3, 5, 3], b: 3 },
     "Aaug": { f: [2, 1, 1, 4], b: 0 },
-    "Baug": { f: [0, 3, 3, 2], b: 0 },
+    "Aadd9": { f: [2, 1, 0, 2], b: 0 },
+    "A6": { f: [2, 1, 2, 0], b: 0 },
+    "Am6": { f: [2, 4, 2, 3], b: 2 },
+    "Bb": { f: [3, 2, 1, 1], b: 0 },
+    "Bbm": { f: [3, 1, 1, 1], b: 0 },
+    "Bb7": { f: [1, 2, 1, 1], b: 0 },
+    "Bbm7": { f: [1, 1, 1, 1], b: 0 },
+    "Bbmaj7": { f: [2, 2, 1, 1], b: 0 },
+    "Bbsus4": { f: [3, 3, 1, 1], b: 0 },
+    "Bbsus2": { f: [3, 0, 1, 1], b: 0 },
+    "Bbdim": { f: [3, 4, 0, 4], b: 0 },
+    "Bbaug": { f: [3, 2, 2, 1], b: 0 },
+    "Bbadd9": { f: [3, 2, 1, 3], b: 0 },
+    "Bb6": { f: [0, 2, 1, 1], b: 0 },
+    "Bbm6": { f: [0, 1, 1, 1], b: 0 },
+    "H": { f: [4, 3, 2, 2], b: 0 },
+    "Hm": { f: [4, 2, 2, 2], b: 0 },
+    "H7": { f: [2, 3, 2, 2], b: 0 },
+    "Hm7": { f: [2, 2, 2, 2], b: 0 },
+    "Hmaj7": { f: [3, 3, 2, 2], b: 0 },
+    "Hsus4": { f: [4, 4, 2, 2], b: 2 },
+    "Hsus2": { f: [4, 1, 2, 2], b: 0 },
+    "Hdim": { f: [4, 2, 1, 2], b: 0 },
     "Haug": { f: [0, 3, 3, 2], b: 0 },
+    "Hadd9": { f: [4, 3, 2, 4], b: 2 },
+    "H6": { f: [1, 3, 2, 2], b: 0 },
+    "Hm6": { f: [1, 2, 2, 2], b: 0 },
 };
 
-// Note indices for chords (semitones from C)
+// Tóny akordu (půltóny od základního tónu)
 const CHORD_NOTES = {
-    "": [0, 4, 7],          // major
-    "m": [0, 3, 7],         // minor
-    "mi": [0, 3, 7],
-    "min": [0, 3, 7],
-    "M": [0, 4, 7],
-    "7": [0, 4, 7, 10],
-    "m7": [0, 3, 7, 10],
-    "maj7": [0, 4, 7, 11],
-    "sus4": [0, 5, 7],
-    "sus2": [0, 2, 7],
-    "dim": [0, 3, 6],
-    "aug": [0, 4, 8],
-    "add9": [0, 4, 7, 14],
-    "6": [0, 4, 7, 9],
-    "m6": [0, 3, 7, 9],
-    "9": [0, 4, 7, 10, 14],
-    "m9": [0, 3, 7, 10, 14],
-    "11": [0, 4, 7, 10, 14, 17],
-    "13": [0, 4, 7, 10, 14, 17, 21],
+    "": [0, 4, 7], "m": [0, 3, 7], "7": [0, 4, 7, 10], "m7": [0, 3, 7, 10], "maj7": [0, 4, 7, 11],
+    "sus4": [0, 5, 7], "sus2": [0, 2, 7], "dim": [0, 3, 6], "aug": [0, 4, 8], "add9": [0, 4, 7, 14],
+    "6": [0, 4, 7, 9], "m6": [0, 3, 7, 9], "9": [0, 4, 7, 10, 14], "m9": [0, 3, 7, 10, 14],
 };
-
-function chordNotes(chord) {
-    // parse root + suffix
-    const m = chord.split("/")[0].match(/^([A-H][#b]?)(.*)$/);
-    if (!m) return [];
-    const root = m[1], suffix = m[2] || "";
-    const rootN = PN[root[0]];
-    let rootPc = rootN + (root[1] === "#" ? 1 : root[1] === "b" ? -1 : 0);
-    if (root[0] === "B") rootPc = 10 + (root[1] === "#" ? 1 : 0);
-    rootPc = ((rootPc % 12) + 12) % 12;
-    const intervals = CHORD_NOTES[suffix] || CHORD_NOTES[""];
-    return intervals.map(i => ((rootPc + i) % 12 + 12) % 12);
+// Přípony zapsané různě -> jednotný název. "2" = sus2 a "4" = sus4 (zápis A2, D2, E4 ve zpěvnících).
+const SUFFIX_ALIAS = {
+    "": "", "M": "", "maj": "", "dur": "",
+    "m": "m", "mi": "m", "min": "m", "-": "m", "mol": "m",
+    "7": "7", "m7": "m7", "mi7": "m7", "min7": "m7", "-7": "m7",
+    "maj7": "maj7", "M7": "maj7", "ma7": "maj7",
+    "sus4": "sus4", "sus": "sus4", "4": "sus4", "sus2": "sus2", "2": "sus2",
+    "dim": "dim", "°": "dim", "aug": "aug", "+": "aug",
+    "add9": "add9", "6": "6", "m6": "m6", "mi6": "m6", "9": "9", "m9": "m9",
+};
+function parseChord(chord) {
+    const m = chord.split("/")[0].match(/^([A-H])([#b]?)(.*)$/);
+    if (!m) return null;
+    const suf = SUFFIX_ALIAS[m[3]];
+    if (suf === undefined) return null;
+    return { pc: ((base(m[1], m[2]) % 12) + 12) % 12, suf };
 }
-
-function chordKey(chord) {
-    // return chord key for lookup (strip bass note)
-    return chord.split("/")[0];
+function chordNotes(chord) {
+    const p = parseChord(chord);
+    return p && CHORD_NOTES[p.suf] ? CHORD_NOTES[p.suf].map(i => (p.pc + i) % 12) : [];
+}
+function chordKey(chord) {      // klíč do tabulek, např. "Bb", "H", "F#m7"; basa za lomítkem se ignoruje
+    const p = parseChord(chord);
+    return p ? ROOT_NAMES[p.pc] + p.suf : null;
 }
 
 // Render fretboard SVG (guitar: 6 strings, ukulele: 4 strings)
@@ -525,7 +557,7 @@ function fretboardSVG(data, stringCount) {
     const nonMuted = frets.filter(x => x > 0);
     const maxFret = nonMuted.length ? Math.max(...nonMuted) : 4;
     const minFret = nonMuted.length ? Math.min(...nonMuted) : 1;
-    const base = b || (minFret > 1 ? minFret : 0);
+    const base = b || (minFret > 1 && !frets.includes(0) ? minFret : 0);   // s prázdnými strunami se kreslí od hmatníku (nutu)
     const showFrets = 4; // frets to display
     const startFret = base > 0 ? base : 1;
 
@@ -588,73 +620,20 @@ function pianoSVG(notes) {
     return `<svg width="${totalW}" height="${kh}" viewBox="0 0 ${totalW} ${kh}" class="cppiano">${wKeys}${bKeys}</svg>`;
 }
 
-let activeChordPopRevert = null;
-
 function openChordPop(anchor, chord) {
     closeChordPop();
     if (S.edit || S.pres) return;
     const key = chordKey(chord);
-    const cw = anchor.parentElement; // .cw element with data-l, data-k, data-c
-    // mutable position tracker so arrow presses can chain without reopening
-    const pos = (cw && cw.dataset.l !== undefined) ? { li: +cw.dataset.l, ki: +cw.dataset.k, c: cw.dataset.c } : null;
-
-    const s = songs.find(x => x.id === S.song);
-    let initialText = s ? s.text : "";
-    let hasUnsaved = false;
-    let isSaving = false;
-
-    activeChordPopRevert = () => {
-        if (hasUnsaved && s && s.text !== initialText) {
-            s.text = initialText;
-            renderSongs();
-        }
-    };
-
-    if (cdTab === "move" && !pos) cdTab = "guitar";
-
     const pop = document.createElement("div");
     pop.className = "cdpop";
-    // Clicks inside the popup must never bubble to the document handler
-    // (render() calls innerHTML= which detaches the clicked tab from DOM,
-    //  causing closest(".cdpop") to return null → popup would close itself)
+    // kliky uvnitř popupu nesmí probublat do dokumentu (po překreslení by popup zavřely)
     pop.addEventListener("click", e => e.stopPropagation());
-
+    const tabs = [{ id: "guitar", label: "Kytara" }, { id: "ukulele", label: "Ukulele" }, { id: "piano", label: "Piano" }];
     function render() {
-        const tabs = [
-            { id: "guitar", label: "Kytara" },
-            { id: "ukulele", label: "Ukulele" },
-            { id: "piano", label: "Piano" },
-        ];
-        if (pos) {
-            tabs.push({ id: "move", label: "Posun" });
-        }
-        let content = "";
-        if (cdTab === "guitar") {
-            content = fretboardSVG(GUITAR_CHORDS[key], 6);
-        } else if (cdTab === "ukulele") {
-            content = fretboardSVG(UKE_CHORDS[key], 4);
-        } else if (cdTab === "piano") {
-            const notes = chordNotes(chord);
-            content = pianoSVG(notes);
-        } else if (cdTab === "move") {
-            content = `
-              <div class="cdmv-panel">
-                <div class="cdmv-grid">
-                  <button class="cdmv cdmv-up" data-dir="up" title="Řádek nahoru" aria-label="Řádek nahoru">↑</button>
-                  <div class="cdmv-row">
-                    <button class="cdmv cdmv-left" data-dir="left" title="Posunout doleva" aria-label="Posunout doleva">←</button>
-                    <button class="cdmv cdmv-right" data-dir="right" title="Posunout doprava" aria-label="Posunout doprava">→</button>
-                  </div>
-                  <button class="cdmv cdmv-down" data-dir="down" title="Řádek dolů" aria-label="Řádek dolů">↓</button>
-                </div>
-                <div class="cdmv-footer">
-                  <button class="cdsave-btn${hasUnsaved ? " cdpending" : ""}" ${isSaving ? "disabled" : ""}>
-                    ${isSaving ? "Ukládám..." : "Uložit"}
-                  </button>
-                </div>
-              </div>
-            `;
-        }
+        const notes = chordNotes(chord);
+        const content = cdTab === "guitar" ? fretboardSVG(GUITAR_CHORDS[key], 6)
+            : cdTab === "ukulele" ? fretboardSVG(UKE_CHORDS[key], 4)
+                : notes.length ? pianoSVG(notes) : `<div class="cdno">Akord nenalezen</div>`;
         pop.innerHTML = `
       <div class="cdhead">
         <span class="cdname">${esc(chord)}</span>
@@ -664,109 +643,19 @@ function openChordPop(anchor, chord) {
       <div class="cdcont">${content}</div>
     `;
         pop.querySelector(".cdcl").onclick = closeChordPop;
-        pop.querySelectorAll(".cdtb").forEach(b => b.onclick = () => {
-            cdTab = b.dataset.cdtab; ls("cdTab", cdTab); render();
-        });
-        if (pos && cdTab === "move") {
-            pop.querySelectorAll(".cdmv").forEach(b => b.onclick = () => shiftChord(b.dataset.dir));
-            const saveBtn = pop.querySelector(".cdsave-btn");
-            if (saveBtn) saveBtn.onclick = savePosition;
-        }
+        pop.querySelectorAll(".cdtb").forEach(b => b.onclick = () => { cdTab = b.dataset.cdtab; ls("cdTab", cdTab); render(); });
     }
     render();
-
     document.body.appendChild(pop);
-
-    function updatePosition() {
-        const anchorEl = (pos ? document.querySelector(`.ln[data-l="${pos.li}"] .cw[data-k="${pos.ki}"] .cc`) : null) || anchor;
-        if (!anchorEl) return;
-        const rect = anchorEl.getBoundingClientRect();
-        const scrollY = window.scrollY, scrollX = window.scrollX;
-        let left = rect.left + scrollX;
-        let top = rect.bottom + scrollY + 6;
-        pop.style.visibility = "hidden";
-        pop.style.display = "block";
-        const pw = pop.offsetWidth;
-        if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12 + scrollX;
-        if (left < 8 + scrollX) left = 8 + scrollX;
-        pop.style.left = left + "px";
-        pop.style.top = top + "px";
-        pop.style.visibility = "";
-    }
-    updatePosition();
-
-    async function savePosition() {
-        if (isSaving || !s) return;
-        if (!hasUnsaved) {
-            mvToast("Žádné změny k uložení.");
-            return;
-        }
-        isSaving = true;
-        render();
-        try {
-            const msg = await store("save", { ...s, text: s.text });
-            initialText = s.text;
-            hasUnsaved = false;
-            isSaving = false;
-            mvToast("Akord uložen. " + msg);
-            render();
-        } catch (err) {
-            isSaving = false;
-            render();
-            mvToast("Nepodařilo se uložit: " + err.message);
-        }
-    }
-
-    function shiftChord(dir) {
-        if (!pos) return;
-        const curSong = songs.find(x => x.id === S.song); if (!curSong) return;
-        const lines = curSong.text.replace(/\r/g, "").split("\n");
-        const { plain, cs } = lineParts(lines[pos.li] || "");
-        if (!cs[pos.ki] || cs[pos.ki].c !== pos.c) {
-            mvToast("Akord nejde přesunout (text se změnil)."); return;
-        }
-        if (dir === "left" || dir === "right") {
-            const delta = dir === "left" ? -1 : 1;
-            const newP = Math.max(0, Math.min(plain.length, cs[pos.ki].p + delta));
-            if (newP === cs[pos.ki].p) return; // already at edge
-            const result = moveChord(lines[pos.li], pos.ki, newP);
-            lines[pos.li] = result.raw;
-            pos.ki = result.k;
-        } else {
-            // up/down: move chord to adjacent line
-            const targetLi = dir === "up" ? pos.li - 1 : pos.li + 1;
-            if (targetLi < 0 || targetLi >= lines.length) return;
-            const curP = cs[pos.ki].p;
-            // remove chord from current line
-            const csOrig = cs.slice(); csOrig.splice(pos.ki, 1);
-            lines[pos.li] = lineBuild(plain, csOrig);
-            // insert chord into target line at same position (clamped)
-            const { plain: tp, cs: tcs } = lineParts(lines[targetLi]);
-            const newP = Math.max(0, Math.min(tp.length, curP));
-            const chordObj = { c: pos.c, p: newP };
-            let ins = tcs.findIndex(y => y.p > newP); if (ins < 0) ins = tcs.length;
-            tcs.splice(ins, 0, chordObj);
-            lines[targetLi] = lineBuild(tp, tcs);
-            pos.li = targetLi; pos.ki = ins;
-        }
-        const nt = lines.join("\n");
-        if (nt === curSong.text) return;
-        curSong.text = nt;
-        hasUnsaved = (curSong.text !== initialText);
-        renderSongs();
-        updatePosition();
-        render();
-    }
+    const rect = anchor.getBoundingClientRect();
+    let left = rect.left + window.scrollX, top = rect.bottom + window.scrollY + 6;
+    pop.style.visibility = "hidden"; pop.style.display = "block";
+    const pw = pop.offsetWidth;
+    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12 + window.scrollX;
+    if (left < 8 + window.scrollX) left = 8 + window.scrollX;
+    pop.style.left = left + "px"; pop.style.top = top + "px"; pop.style.visibility = "";
 }
-
-function closeChordPop() {
-    if (activeChordPopRevert) {
-        const revert = activeChordPopRevert;
-        activeChordPopRevert = null;
-        revert();
-    }
-    document.querySelectorAll(".cdpop").forEach(p => p.remove());
-}
+function closeChordPop() { document.querySelectorAll(".cdpop").forEach(p => p.remove()) }
 function fixChordCollisions() {
     const song = document.querySelector("pre.song");
     if (!song) return;
@@ -798,7 +687,7 @@ function toast(msg) {                                        // krátká zpráva
     let t = $("#toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; document.body.appendChild(t) }
     t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true }, 5000);
 }
-function shrink(file, max = 1400) {                          // zmenší obrázek (menší = rychlejší) a převede na JPEG
+function shrink(file, max = 2000) {                          // zmenší obrázek a převede na JPEG; 2000 px, ať jsou čitelné i drobné akordy
     return new Promise((ok, no) => {
         const img = new Image(), url = URL.createObjectURL(file);
         img.onload = () => {
@@ -806,7 +695,7 @@ function shrink(file, max = 1400) {                          // zmenší obráze
             c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
             x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
             URL.revokeObjectURL(url);
-            ok({ mime: "image/jpeg", data: c.toDataURL("image/jpeg", .8).split(",")[1] });
+            ok({ mime: "image/jpeg", data: c.toDataURL("image/jpeg", .88).split(",")[1] });
         };
         img.onerror = () => no(new Error("obrázek nejde přečíst"));
         img.src = url;
@@ -873,84 +762,3 @@ if (!("wakeLock" in navigator)) $("#wk").hidden = true;
 
 // ---- tisk ----
 $("#pr").onclick = () => window.print();
-
-// ---- přesouvání akordů (podržet ~0,6 s a táhnout; po puštění se uloží) ----
-const HOLD = 600;
-function lineParts(raw) { const re = /\[([^\]\s][^\]]{0,10})\]/g; let plain = "", last = 0, m; const cs = []; while ((m = re.exec(raw))) { plain += raw.slice(last, m.index); cs.push({ c: m[1], p: plain.length }); last = m.index + m[0].length } plain += raw.slice(last); return { plain, cs } }
-function lineBuild(plain, cs) { let o = "", pos = 0; for (const x of cs) { o += plain.slice(pos, x.p) + "[" + x.c + "]"; pos = x.p } return o + plain.slice(pos) }
-function moveChord(raw, k, p) { const { plain, cs } = lineParts(raw); const x = cs.splice(k, 1)[0]; x.p = Math.max(0, Math.min(plain.length, p)); let i = cs.findIndex(y => y.p > x.p); if (i < 0) i = cs.length; cs.splice(i, 0, x); return { raw: lineBuild(plain, cs), k: i } }
-function caretAt(x, y) { let n, o; if (document.caretPositionFromPoint) { const c = document.caretPositionFromPoint(x, y); if (c) { n = c.offsetNode; o = c.offset } } else if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); if (r) { n = r.startContainer; o = r.startOffset } } return n ? { n, o } : null }
-function plainIdx(ln, c) {
-    if (!c || c.n.nodeType !== 3 || !ln.contains(c.n)) return null;
-    const w = document.createTreeWalker(ln, NodeFilter.SHOW_TEXT); let t = 0, nd;
-    while ((nd = w.nextNode())) {
-        const pe = nd.parentElement; if (pe.closest(".cc")) { if (nd === c.n) return null; continue }
-        const ph = pe.closest(".ph"), len = ph ? 0 : nd.data.replace(/\n/g, "").length;
-        if (nd === c.n) return t + (ph ? 0 : Math.min(c.o, len));
-        t += len
-    }
-    return null
-}
-function caretRect(c) {
-    const r = document.createRange(), L = c.n.data.length, o = Math.min(c.o, L);
-    r.setStart(c.n, o); r.collapse(true); let b = r.getClientRects()[0];
-    if (b && (b.height || b.width)) return { x: b.left, y: b.top, h: b.height };
-    if (o > 0) { r.setStart(c.n, o - 1); r.setEnd(c.n, o); b = r.getClientRects()[0]; if (b) return { x: b.right, y: b.top, h: b.height } }
-    if (o < L) { r.setStart(c.n, o); r.setEnd(c.n, o + 1); b = r.getClientRects()[0]; if (b) return { x: b.left, y: b.top, h: b.height } }
-    return null
-}
-function mvToast(t) { const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2800) }
-let mv = null, noClick = false, ghost = null;
-function mvBegin(el, x, y, touch) {
-    if (S.edit || S.pres) return;
-    const cw = el.parentElement, ln = cw.closest(".ln");
-    mv = { el, cw, ln, x0: x, y0: y, on: false, li: +cw.dataset.l, k: +cw.dataset.k, p: null, touch: !!touch };
-    mv.t = setTimeout(mvStart, HOLD)
-}
-function mvStart() {
-    const m = mv; if (!m) return;
-    const s = songs.find(x => x.id === S.song); if (!s) { mv = null; return }
-    const raw = s.text.replace(/\r/g, "").split("\n"), cs = lineParts(raw[m.li] || "").cs;
-    if (!cs[m.k] || cs[m.k].c !== m.cw.dataset.c) { mv = null; mvToast("Tenhle akord nejde přesunout (zobrazený text se liší od uloženého)."); return }
-    const tr = m.cw.firstElementChild.getBoundingClientRect(), cr = m.el.getBoundingClientRect();
-    m.dy = (tr.top + tr.height / 2) - (cr.top + cr.height / 2);
-    m.sid = s.id; m.raw0 = raw; m.on = true;
-    ghost = document.createElement("div"); ghost.className = "mvghost"; ghost.style.display = "none";
-    const lb = document.createElement("span"); lb.textContent = m.el.textContent; ghost.appendChild(lb); document.body.appendChild(ghost);
-    m.el.classList.add("mv"); document.body.classList.add("mvg"); if (navigator.vibrate) navigator.vibrate(25)
-}
-function mvMove(x, y) {
-    if (!mv) return false;
-    if (!mv.on) { if (Math.hypot(x - mv.x0, y - mv.y0) > 10) { clearTimeout(mv.t); mv = null } return false }
-    const pr = mv.ln.parentElement.getBoundingClientRect(), cx = Math.max(pr.left + 2, Math.min(pr.right - 2, x));
-    const c = caretAt(cx, y + mv.dy), p = plainIdx(mv.ln, c); if (p == null) return true;
-    mv.p = p; const b = caretRect(c);
-    if (b && ghost) { ghost.style.display = "block"; ghost.style.left = b.x + "px"; ghost.style.top = b.y + "px"; ghost.style.height = b.h + "px" }
-    return true
-}
-async function mvEnd(ok) {
-    const m = mv; if (!m) return; clearTimeout(m.t); mv = null; if (!m.on) return;
-    document.body.classList.remove("mvg"); m.el.classList.remove("mv"); if (ghost) { ghost.remove(); ghost = null }
-    noClick = true; setTimeout(() => noClick = false, 500);
-    const s = songs.find(x => x.id === m.sid); if (!ok || !s || m.p == null) return;
-    const lines = m.raw0.slice(); lines[m.li] = moveChord(lines[m.li], m.k, m.p).raw;
-    const nt = lines.join("\n"), old = s.text;
-    if (nt === m.raw0.join("\n")) return;
-    s.text = nt; renderSongs();
-    try { const msg = await store("save", { ...s, text: nt }); mvToast("Akord přesunut. " + msg) }
-    catch (err) { const s2 = songs.find(x => x.id === m.sid); if (s2) s2.text = old; renderSongs(); mvToast("Nepodařilo se uložit: " + err.message) }
-}
-const chordEl = e => e.target.closest && e.target.closest(".ln .cc");
-// myš
-document.addEventListener("pointerdown", e => { if (e.pointerType === "touch" || e.button) return; const el = chordEl(e); if (el) mvBegin(el, e.clientX, e.clientY) });
-document.addEventListener("pointermove", e => { if (e.pointerType !== "touch" && mvMove(e.clientX, e.clientY)) e.preventDefault() });
-document.addEventListener("pointerup", e => { if (e.pointerType !== "touch") mvEnd(true) });
-document.addEventListener("pointercancel", e => { if (e.pointerType !== "touch") mvEnd(false) });
-// dotyk (touch události: cíl se během tažení nemění, takže na telefonu funguje spolehlivě)
-document.addEventListener("touchstart", e => { if (e.touches.length !== 1) { mvEnd(false); return } const el = chordEl(e); if (el) mvBegin(el, e.touches[0].clientX, e.touches[0].clientY, true) }, { passive: true });
-document.addEventListener("touchmove", e => { if (!mv || !mv.touch) return; const t = e.touches[0]; if (mvMove(t.clientX, t.clientY)) e.preventDefault() }, { passive: false });
-document.addEventListener("touchend", e => { if (!mv || !mv.touch) return; if (mv.on) e.preventDefault(); mvEnd(true) }, { passive: false });
-document.addEventListener("touchcancel", () => { if (mv && mv.touch) mvEnd(false) });
-document.addEventListener("contextmenu", e => { if (mv || (e.target.closest && e.target.closest(".ln .cc"))) e.preventDefault() });
-document.addEventListener("click", e => { if (noClick) { e.stopPropagation(); e.preventDefault() } }, true);
-// ---- /přesouvání akordů
