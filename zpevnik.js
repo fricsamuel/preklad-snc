@@ -58,6 +58,7 @@ const CRE = /^([A-H])([#b]?)((?:maj|min|mi|m|M|dim|aug|sus|add|[0-9+°()\-#b])*)
 // pracují s vnitřním tvarem "akord v závorkách", na který text převádí inl(); toAbove() jde opačným směrem.
 const isCh = w => { const i = w.indexOf("/"), a = i < 0 ? w : w.slice(0, i); return CRE.test(a) && (i < 0 || /^[A-H](?:#|b|is|es)?\d?$/.test(w.slice(i + 1))) };   // basa za lomítkem smí být i české Fis, Es
 const SEPTOK = /^(?:[|/\\:\-–]+|x\d|\dx|\(\dx\)|\(x\d\))$/;             // oddělovače na řádku akordů: | / - x2 (2x)
+const REP = /^\|*:\|*$/;                                       // značky opakování na řádku akordů: |: :| ||: :||
 const isChordLine = l => { const w = l.trim().split(/\s+/); return !!l.trim() && w.some(isCh) && w.every(x => isCh(x) || SEPTOK.test(x)) };
 const SECLINE = /^\s*\{[^}]+\}/;
 function inl(t) {
@@ -68,9 +69,9 @@ function inl(t) {
         const nx = L[i + 1];
         if (nx !== undefined && nx.trim() && !SECLINE.test(nx) && !isChordLine(nx)) {      // řádek akordů + text pod ním = jeden řádek
             const lyric = nx.replace(/\s+$/, ""), re = /\S+/g; let m, o = "", p = 0;
-            while ((m = re.exec(l))) if (isCh(m[0])) { const c = Math.min(m.index, lyric.length); o += lyric.slice(p, c) + "[" + m[0] + "]"; p = c }
+            while ((m = re.exec(l))) if (isCh(m[0]) || REP.test(m[0])) { const c = Math.min(m.index, lyric.length); o += lyric.slice(p, c) + "[" + m[0] + "]"; p = c }
             out.push(o + lyric.slice(p)); i++;
-        } else out.push(l.trim().split(/\s+/).filter(isCh).map(c => "[" + c + "]").join(" "));   // samotné akordy (předehra, mezihra)
+        } else out.push(l.trim().split(/\s+/).filter(w => isCh(w) || REP.test(w)).map(c => "[" + c + "]").join(" "));   // samotné akordy (předehra, mezihra)
     }
     return out.join("\n");
 }
@@ -80,7 +81,7 @@ function toAbove(t) {
         const l = L[i];
         if (!HAS.test(l)) { out.push(l); continue }
         let lyric = "", cs = [], p = 0, m; const re = /\[([^\]]*)\]/g;
-        while ((m = re.exec(l))) { lyric += l.slice(p, m.index); p = m.index + m[0].length; const c = m[1].trim(); if (isCh(c)) cs.push([lyric.length, c]); else lyric += m[0] }
+        while ((m = re.exec(l))) { lyric += l.slice(p, m.index); p = m.index + m[0].length; const c = m[1].trim(); if (isCh(c) || REP.test(c)) cs.push([lyric.length, c]); else lyric += m[0] }
         lyric += l.slice(p);
         const lead = lyric.length - lyric.replace(/^\s+/, "").length; lyric = lyric.trim();
         if (!lyric) {                                                // řádek jen s akordy
@@ -118,7 +119,7 @@ const firstChord = t => { const re = /\[([^\]\s][^\]]{0,10})\]/g; let m; while (
 const pcOf = c => { const m = c.split("/")[0].match(CRE); return (base(m[1], m[2]) + 12) % 12 };
 function tchord(c, n) { return c.split("/").map((p, i) => { const m = p.match(CRE); if (!m || (i > 0 && m[3])) return p; return NM[(base(m[1], m[2]) + n + 24) % 12] + m[3] }).join("/") }
 const secLabel = k => { const m = k.match(/^V(\d+)$/i); return m ? m[1] + ". sloka" : /^REF$/i.test(k) ? "Refrén" : /^BRIDGE$/i.test(k) ? "Bridge" : /^CODA$/i.test(k) ? "Coda" : k };
-const chordsL = (h, n, li) => { let k = 0; return h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => { const t = n ? tchord(c, n) : c; return `<span class="cw" data-l="${li}" data-k="${k++}" data-c="${c}"><span${b ? "" : ' class="ph"'}>${b || "\u00a0"}</span><span class="cc" data-chord="${t}">${t}</span></span>` }) };
+const chordsL = (h, n, li) => { let k = 0; return h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => { const t = n ? tchord(c, n) : c; return `<span class="cw" data-l="${li}" data-k="${k++}" data-c="${c}"><span${b ? "" : ' class="ph"'}>${b || "\u00a0"}</span><span class="cc${REP.test(c) ? " rp" : ""}" data-chord="${t}">${t}</span></span>` }) };
 function songHTML(t, n) { let o = "", li = 0; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*\{([^}]+)\}\s*$/); o += m ? `<span class="sec">${esc(secLabel(m[1].trim()))}</span>` : `<span class="ln" data-l="${li}">${chordsL(esc(l), n, li)}\n</span>`; li++ } return o }
 function expand(t) {
     t = inl(t);
@@ -273,7 +274,7 @@ async function songAct(t) {
 document.addEventListener("click", e => {
     if (document.querySelector(".cdpop") && !e.target.closest(".cdpop,.cc")) closeChordPop();
     if (S.pop && !e.target.closest(".pop,[data-s=tk]")) { S.pop = false; const q = document.querySelector(".pop"); if (q) q.remove() }
-    if (e.target.closest(".cc")) { const cc = e.target.closest(".cc"); openChordPop(cc, cc.dataset.chord); return; }
+    if (e.target.closest(".cc")) { const cc = e.target.closest(".cc"); if (!cc.classList.contains("rp")) openChordPop(cc, cc.dataset.chord); return; }
     const t = e.target.closest("[data-s],#fs,#th"); if (!t) return;
     if (t.dataset.s) songAct(t);
     else if (t.id === "fs") { const r = document.documentElement, v = parseInt(getComputedStyle(r).getPropertyValue("--fs")); r.style.setProperty("--fs", (v >= 26 ? 16 : v + 2) + "px"); fixChordCollisions(); }

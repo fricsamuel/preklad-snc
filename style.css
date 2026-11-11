@@ -1008,3 +1008,14 @@ textarea {
     height: auto;
     cursor: zoom-in
 }
+
+/* značky opakování na řádku akordů (|: :|): stejná řádka jako akordy, ale nejdou kliknout a jsou tlumenější */
+.cc.rp {
+    cursor: default;
+    color: var(--mute)
+}
+
+.cc.rp:hover {
+    background: none;
+    outline: none
+}
