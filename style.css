@@ -671,12 +671,14 @@ textarea.f1 {
 
 .cc {
     position: absolute;
-    bottom: 100%;   /* přímo nad textem v .cw */
+    bottom: 100%;
+    /* přímo nad textem v .cw */
     left: 0;
     font: 700 .68em/1.15 var(--sans);
     color: var(--ch);
     letter-spacing: .02em;
-    white-space: nowrap; /* akord se nikdy nezalamuje */
+    white-space: nowrap;
+    /* akord se nikdy nezalamuje */
 }
 
 /* AI import: fronta a koncepty */
@@ -717,6 +719,7 @@ textarea.f1 {
     border-radius: 3px;
     transition: background .15s, color .15s;
 }
+
 .cc:hover {
     background: color-mix(in srgb, var(--ch) 15%, transparent);
     outline: 1px solid color-mix(in srgb, var(--ch) 35%, transparent);
@@ -728,15 +731,23 @@ textarea.f1 {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 14px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.12);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .22), 0 2px 8px rgba(0, 0, 0, .12);
     padding: 0;
     min-width: 200px;
     overflow: hidden;
     animation: cdpop-in .15s ease;
 }
+
 @keyframes cdpop-in {
-    from { opacity: 0; transform: translateY(-6px) scale(.97); }
-    to   { opacity: 1; transform: none; }
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .cdhead {
@@ -746,11 +757,13 @@ textarea.f1 {
     padding: 10px 12px 6px;
     border-bottom: 1px solid var(--line);
 }
+
 .cdname {
     font: 700 16px var(--sans);
     color: var(--ch);
     letter-spacing: .02em;
 }
+
 .cdcl {
     background: none;
     border: none;
@@ -761,7 +774,11 @@ textarea.f1 {
     padding: 2px 4px;
     border-radius: 6px;
 }
-.cdcl:hover { color: var(--ink); background: var(--bg); }
+
+.cdcl:hover {
+    color: var(--ink);
+    background: var(--bg);
+}
 
 .cdtabs {
     display: flex;
@@ -770,6 +787,7 @@ textarea.f1 {
     border-bottom: 1px solid var(--line);
     background: var(--bg);
 }
+
 .cdtb {
     background: none;
     border: 1px solid transparent;
@@ -783,7 +801,13 @@ textarea.f1 {
     flex: 1;
     text-align: center;
 }
-.cdtb:hover { background: var(--panel); color: var(--ink); border-color: var(--line); }
+
+.cdtb:hover {
+    background: var(--panel);
+    color: var(--ink);
+    border-color: var(--line);
+}
+
 .cdtb.cdon {
     background: var(--ch);
     color: #fff;
@@ -797,6 +821,7 @@ textarea.f1 {
     align-items: center;
     padding: 12px 14px 14px;
 }
+
 .cdno {
     font: 14px var(--sans);
     color: var(--mute);
@@ -804,33 +829,167 @@ textarea.f1 {
 }
 
 /* Fretboard SVG */
-.cdfb { display: block; overflow: visible; }
-.cdg  { stroke: var(--line); stroke-width: 1.5; }
-.cdnut { fill: var(--ink); }
-.cdd  { fill: var(--ch); }
-.cdo  { fill: none; stroke: var(--ink); stroke-width: 2; }
-.cdx  { fill: var(--mute); font: bold 14px var(--sans); }
-.cdfl { fill: var(--mute); font: 11px var(--sans); }
+.cdfb {
+    display: block;
+    overflow: visible;
+}
+
+.cdg {
+    stroke: var(--line);
+    stroke-width: 1.5;
+}
+
+.cdnut {
+    fill: var(--ink);
+}
+
+.cdd {
+    fill: var(--ch);
+}
+
+.cdo {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2;
+}
+
+.cdx {
+    fill: var(--mute);
+    font: bold 14px var(--sans);
+}
+
+.cdfl {
+    fill: var(--mute);
+    font: 11px var(--sans);
+}
 
 /* Piano SVG */
-.cppiano { display: block; border-radius: 6px; overflow: visible; }
-.cpwk { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
-.cpbk { fill: var(--ink); }
-.cpwk.cpa { fill: color-mix(in srgb, var(--ch) 22%, var(--panel)); stroke: var(--ch); stroke-width: 1.5; }
-.cpbk.cpa { fill: var(--ch); }
+.cppiano {
+    display: block;
+    border-radius: 6px;
+    overflow: visible;
+}
+
+.cpwk {
+    fill: var(--panel);
+    stroke: var(--line);
+    stroke-width: 1;
+}
+
+.cpbk {
+    fill: var(--ink);
+}
+
+.cpwk.cpa {
+    fill: color-mix(in srgb, var(--ch) 22%, var(--panel));
+    stroke: var(--ch);
+    stroke-width: 1.5;
+}
+
+.cpbk.cpa {
+    fill: var(--ch);
+}
+
 /* dots: on white key = dark ink, on black key = white */
-.cpwk + .cpd { fill: var(--ink); }
-.cpbk + .cpd { fill: #fff; }
+.cpwk+.cpd {
+    fill: var(--ink);
+}
+
+.cpbk+.cpd {
+    fill: #fff;
+}
 
 
 /* ---- nezhasínání + tisk ---- */
-#wk.on { background: var(--acc); color: var(--bg); border-color: var(--acc) }
-@media print {
-    header, nav, #bd, .ed, .pres, .tp, .prb, .toast, .cdpop, button, .btn, .info { display: none !important }
-    html, body, .wrap, main, article { background: #fff !important; color: #000 !important; margin: 0; padding: 0; display: block; max-width: none }
-    :root { --ink: #000; --bg: #fff; --ch: #000; --mute: #000 }
-    .cc { color: #000 !important; background: none !important; outline: none !important }
-    pre.song { font-size: 14pt }
+#wk.on {
+    background: var(--acc);
+    color: var(--bg);
+    border-color: var(--acc)
 }
 
-textarea { color: inherit }
+@media print {
+
+    header,
+    nav,
+    #bd,
+    .ed,
+    .pres,
+    .tp,
+    .prb,
+    .toast,
+    .cdpop,
+    button,
+    .btn,
+    .info {
+        display: none !important
+    }
+
+    html,
+    body,
+    .wrap,
+    main,
+    article {
+        background: #fff !important;
+        color: #000 !important;
+        margin: 0;
+        padding: 0;
+        display: block;
+        max-width: none
+    }
+
+    :root {
+        --ink: #000;
+        --bg: #fff;
+        --ch: #000;
+        --mute: #000
+    }
+
+    .cc {
+        color: #000 !important;
+        background: none !important;
+        outline: none !important
+    }
+
+    pre.song {
+        font-size: 14pt
+    }
+}
+
+textarea {
+    color: inherit
+}
+
+/* editor písničky: neproporcionální písmo, aby akordy nad řádkem seděly nad správnou slabikou */
+#sx {
+    font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    white-space: pre;
+    overflow: auto;
+    tab-size: 4
+}
+
+/* originál screenshotu u konceptu z AI */
+.aisrc {
+    margin: 0 0 12px
+}
+
+.aisrc summary {
+    cursor: pointer;
+    color: var(--mute);
+    font-size: 14px;
+    margin-bottom: 6px
+}
+
+.aisrc div {
+    max-height: 50vh;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff
+}
+
+.aisrc img {
+    display: block;
+    width: 100%;
+    height: auto;
+    cursor: zoom-in
+}

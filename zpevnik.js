@@ -49,6 +49,70 @@ async function store(act, song) {
 }
 const PN = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, H: 11, B: 10 }, NM = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "B", "H"];
 const CRE = /^([A-H])([#b]?)((?:maj|min|mi|m|M|dim|aug|sus|add|[0-9+°()\-#b])*)$/;
+
+// ==== ZÁPIS AKORDŮ NAD ŘÁDKEM ====
+// V databázi i v editoru jsou akordy na samostatném řádku NAD textem, zarovnané sloupcem nad slabiku:
+//       G        C
+//     Jsi Král a Pán
+// Starý zápis "Jsi Kr[G]al" se pořád čte (a při úpravě písničky se převede). Vykreslování, transpozice a prezentace
+// pracují s vnitřním tvarem "akord v závorkách", na který text převádí inl(); toAbove() jde opačným směrem.
+const isCh = w => { const i = w.indexOf("/"), a = i < 0 ? w : w.slice(0, i); return CRE.test(a) && (i < 0 || /^[A-H](?:#|b|is|es)?\d?$/.test(w.slice(i + 1))) };   // basa za lomítkem smí být i české Fis, Es
+const SEPTOK = /^(?:[|/\\:\-–]+|x\d|\dx|\(\dx\)|\(x\d\))$/;             // oddělovače na řádku akordů: | / - x2 (2x)
+const isChordLine = l => { const w = l.trim().split(/\s+/); return !!l.trim() && w.some(isCh) && w.every(x => isCh(x) || SEPTOK.test(x)) };
+const SECLINE = /^\s*\{[^}]+\}/;
+function inl(t) {
+    const L = String(t).replace(/\r/g, "").split("\n"), out = [];
+    for (let i = 0; i < L.length; i++) {
+        const l = L[i];
+        if (!isChordLine(l)) { out.push(l); continue }
+        const nx = L[i + 1];
+        if (nx !== undefined && nx.trim() && !SECLINE.test(nx) && !isChordLine(nx)) {      // řádek akordů + text pod ním = jeden řádek
+            const lyric = nx.replace(/\s+$/, ""), re = /\S+/g; let m, o = "", p = 0;
+            while ((m = re.exec(l))) if (isCh(m[0])) { const c = Math.min(m.index, lyric.length); o += lyric.slice(p, c) + "[" + m[0] + "]"; p = c }
+            out.push(o + lyric.slice(p)); i++;
+        } else out.push(l.trim().split(/\s+/).filter(isCh).map(c => "[" + c + "]").join(" "));   // samotné akordy (předehra, mezihra)
+    }
+    return out.join("\n");
+}
+function toAbove(t) {
+    const L = String(t).replace(/\r/g, "").split("\n"), out = [], HAS = /\[[^\]]+\]/;
+    for (let i = 0; i < L.length; i++) {
+        const l = L[i];
+        if (!HAS.test(l)) { out.push(l); continue }
+        let lyric = "", cs = [], p = 0, m; const re = /\[([^\]]*)\]/g;
+        while ((m = re.exec(l))) { lyric += l.slice(p, m.index); p = m.index + m[0].length; const c = m[1].trim(); if (isCh(c)) cs.push([lyric.length, c]); else lyric += m[0] }
+        lyric += l.slice(p);
+        const lead = lyric.length - lyric.replace(/^\s+/, "").length; lyric = lyric.trim();
+        if (!lyric) {                                                // řádek jen s akordy
+            out.push(cs.map(c => c[1]).join(" "));
+            const nx = L[i + 1]; if (nx !== undefined && nx.trim() && !SECLINE.test(nx) && !HAS.test(nx)) out.push("");   // prázdný řádek, ať se nespojí s textem pod ním
+            continue
+        }
+        let row = "";
+        for (const [pos, ch] of cs) row = row.padEnd(Math.max(pos - lead, 0, row.length ? row.length + 1 : 0)) + ch;   // při srážce se akord posune doprava
+        out.push(row, lyric);
+    }
+    return out.join("\n");
+}
+// vloží akord do editoru nad řádek, na sloupec kurzoru
+function insChord(ta, ch) {
+    const v = ta.value, p = ta.selectionStart, ls = v.lastIndexOf("\n", p - 1) + 1;
+    let le = v.indexOf("\n", p); if (le < 0) le = v.length;
+    const line = v.slice(ls, le), col = p - ls;
+    if (SECLINE.test(line)) return;
+    if (!line.trim() || isChordLine(line)) { ta.setRangeText(ch + " ", p, p, "end"); return }     // kurzor je na řádku akordů: prostě psát
+    const ps = ls > 0 ? v.lastIndexOf("\n", ls - 2) + 1 : -1, prev = ls > 0 ? v.slice(ps, ls - 1) : "";
+    if (ls > 0 && isChordLine(prev)) {
+        let q = col; const fits = x => !/\S/.test(prev.slice(Math.max(0, x - 1), x + ch.length + 1));
+        while (!fits(q)) q++;
+        const np = (prev.padEnd(q + ch.length).slice(0, q) + ch + prev.slice(q + ch.length)).replace(/\s+$/, "");
+        ta.setRangeText(np, ps, ls - 1, "preserve"); ta.selectionStart = ta.selectionEnd = p + np.length - prev.length;
+    } else {
+        const nl = " ".repeat(col) + ch + "\n";
+        ta.setRangeText(nl, ls, ls, "preserve"); ta.selectionStart = ta.selectionEnd = p + nl.length;
+    }
+}
+// ==== /ZÁPIS AKORDŮ ====
 const base = (L, a) => L === "B" ? 10 + (a === "#" ? 1 : 0) : PN[L] + (a === "#" ? 1 : a === "b" ? -1 : 0);
 const firstChord = t => { const re = /\[([^\]\s][^\]]{0,10})\]/g; let m; while ((m = re.exec(t))) if (CRE.test(m[1].split("/")[0])) return m[1]; return null };
 const pcOf = c => { const m = c.split("/")[0].match(CRE); return (base(m[1], m[2]) + 12) % 12 };
@@ -57,6 +121,7 @@ const secLabel = k => { const m = k.match(/^V(\d+)$/i); return m ? m[1] + ". slo
 const chordsL = (h, n, li) => { let k = 0; return h.replace(/\[([^\]\s][^\]]{0,10})\]([^\s\[]*)/g, (m, c, b) => { const t = n ? tchord(c, n) : c; return `<span class="cw" data-l="${li}" data-k="${k++}" data-c="${c}"><span${b ? "" : ' class="ph"'}>${b || "\u00a0"}</span><span class="cc" data-chord="${t}">${t}</span></span>` }) };
 function songHTML(t, n) { let o = "", li = 0; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*\{([^}]+)\}\s*$/); o += m ? `<span class="sec">${esc(secLabel(m[1].trim()))}</span>` : `<span class="ln" data-l="${li}">${chordsL(esc(l), n, li)}\n</span>`; li++ } return o }
 function expand(t) {
+    t = inl(t);
     const lines = []; for (const l of t.replace(/\r/g, "").split("\n")) { const m = l.match(/^\s*(\{[^}]+\})[ \t]+(\S.*)$/); if (m) lines.push(m[1], m[2]); else lines.push(l) }
     const secs = [{ k: null, b: [] }]; for (const l of lines) { const m = l.match(/^\s*\{([^}]+)\}\s*$/); if (m) secs.push({ k: m[1].trim().toUpperCase(), r: m[1].trim(), b: [] }); else secs[secs.length - 1].b.push(l) }
     const trim = b => { let a = 0, z = b.length; while (a < z && !b[a].trim()) a++; while (z > a && !b[z - 1].trim()) z--; return b.slice(a, z) };
@@ -72,7 +137,6 @@ function expand(t) {
     }
     return secs.map(s => (s.k === null ? [] : ["{" + s.r + "}"]).concat(s.b)).flat().join("\n")
 }
-document.addEventListener("change", e => { if (e.target.id === "sx") e.target.value = expand(e.target.value) });
 const strip = l => l.replace(/\[[^\]]*\]/g, "").replace(/\s{2,}/g, " ").trim();
 function parts(t) {
     const out = []; let cur = null;
@@ -130,10 +194,11 @@ async function renderSongs() {
     } else S.trFor = null;
     if (S.edit) {
         const s = S.edit; m.innerHTML = `<article><h2>${s.id ? "Upravit písničku" : "Nová písnička"}</h2>
+${S.draft ? '<details class="aisrc" open><summary>Originál ze screenshotu (klepnutím na obrázek ho zvětšíš)</summary><div id="aisrc"></div></details>' : ""}
 <input class="f1" id="st" placeholder="Název" value="${esc(s.title)}">
 <input class="f1" id="sa" placeholder="Autor (nepovinné)" value="${esc(s.author || "")}">
-<div class="edw"><textarea class="f1" id="sx" placeholder="Text písničky – akordy piš do hranatých závorek, např. Jsi Kr[G]al">${esc(s.text)}</textarea>${edBar()}</div>
-<p class="info">Akordy: Jsi Kr[G]al · Části na samostatný řádek: {V1}, {V2}, {REF}. {V2} bez akordů se doplní podle {V1}, prázdné {REF} se doplní refrénem.</p>
+<div class="edw"><textarea class="f1" id="sx" wrap="off" spellcheck="false" placeholder="Text písničky. Akordy piš na řádek nad text, zarovnané nad slabiku:&#10;      G        C&#10;Jsi Král a Pán">${esc(s.text)}</textarea>${edBar()}</div>
+<p class="info">Akordy piš na řádek nad text, zarovnané nad slabiku (jako ve zpěvnících, klidně sem vlož zkopírovaný text). Tlačítka akordů je vloží nad místo, kde stojí kurzor. Části na samostatný řádek: {V1}, {V2}, {REF}. {V2} bez akordů se doplní podle {V1}, prázdné {REF} se doplní refrénem.</p>
 ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládání" value="${esc(ls("pin") || "")}">` : ""}
 <p class="info" id="sm"></p><button class="btn ac" data-s="save">Uložit</button> <button class="btn" data-s="cancel">Zrušit</button></article>`; return
     }
@@ -151,14 +216,14 @@ ${API ? `<input class="f1" id="sp" type="password" placeholder="PIN pro ukládá
 <div class="seq"><button class="btn ac" data-s="pfs">Kopírovat pro FreeShow</button><button class="btn pp" data-s="ppt">PowerPoint</button></div><p class="info" id="pm">Pro FreeShow: zkopíruj a ve FreeShow stiskni Ctrl+Alt+I. Text se kopíruje bez akordů a značek.</p></div>`}
                 pr = `<div class="prb"><button class="btn" data-s="pr">Přidat do prezentace ${S.pres ? "▴" : "▾"}</button></div>` + pr
             }
-            const f = firstChord(s.text), p0 = f ? pcOf(f) : 0; S.p0 = p0; const cur = ((p0 + S.tr) % 12 + 12) % 12;
+            const f = firstChord(expand(s.text)), p0 = f ? pcOf(f) : 0; S.p0 = p0; const cur = ((p0 + S.tr) % 12 + 12) % 12;
             const tp = f ? `<div class="tp"><button class="btn" data-s="tm">−1</button><button class="btn" data-s="tk">${esc(tchord(f, S.tr))} ▾</button><button class="btn" data-s="tp">+1</button>${S.pop ? `<div class="pop">${NM.map((n, k) => `<button class="btn${k === cur ? " on" : ""}" data-s="key" data-k="${k}">${n}</button>`).join("")}</div>` : ""}</div>` : "";
-            m.innerHTML = `<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(s.text, S.tr)}</pre>${pr}<div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;
+            m.innerHTML = `<article><button class="btn" data-s="back">← Zpěvník</button><h2>${esc(s.title)}</h2><p class="info">${esc(i)}</p><pre class="song">${songHTML(expand(s.text), S.tr)}</pre>${pr}<div class="pg"><button class="btn" data-s="edit" data-id="${esc(s.id)}">Upravit</button>${tp}<button class="btn" data-s="del" data-id="${esc(s.id)}">Smazat</button></div></article>`;
             fixChordCollisions();
             return
         } S.song = null
     }
-    const l = songs.filter(s => !qv || qv.split(/\s+/).every(t => norm(s.title + " " + (s.author || "") + " " + s.text).includes(t))).sort((a, b) => a.title.localeCompare(b.title, "cs"));
+    const l = songs.filter(s => !qv || qv.split(/\s+/).every(t => norm(s.title + " " + (s.author || "") + " " + strip(inl(s.text))).includes(t))).sort((a, b) => a.title.localeCompare(b.title, "cs"));
     m.innerHTML = `<article><h2>Zpěvník</h2><p class="info">${esc(S.msg || l.length + " písniček")}</p><button class="btn ac" data-s="new">+ Nová písnička</button><div style="height:14px"></div>${aiBox()}` + l.map(s => `<button class="r" data-s="open" data-id="${esc(s.id)}"><b>${esc(s.title)}</b>${esc(s.author || "")}</button>`).join("") + `</article>`; S.msg = ""
 }
 async function songAct(t) {
@@ -172,7 +237,7 @@ async function songAct(t) {
     else if (a === "pa") { S.seq.push(+t.dataset.i); renderSongs() }
     else if (a === "px") { S.seq.splice(+t.dataset.i, 1); renderSongs() }
     else if (a === "iq") { S.q = t.dataset.q; document.querySelectorAll(".ed .qs button[data-q]").forEach(b => b.classList.toggle("on", b === t)); document.querySelectorAll(".rs button").forEach(b => { const c = b.dataset.r + S.q; b.dataset.v = "[" + c + "]"; b.textContent = c }) }
-    else if (a === "ins" || a === "isv" || a === "irf" || a === "ibr" || a === "ico") { const ta = $("#sx"); if (ta) { const p = ta.selectionStart; const k = a === "isv" ? "V" : a === "irf" ? "REF" : a === "ibr" ? "B" : a === "ico" ? "C" : null; ta.setRangeText(a === "ins" ? t.dataset.v : secStr(ta.value, p, k), p, p, "end"); ta.focus() } }
+    else if (a === "ins" || a === "isv" || a === "irf" || a === "ibr" || a === "ico") { const ta = $("#sx"); if (ta) { const p = ta.selectionStart; const k = a === "isv" ? "V" : a === "irf" ? "REF" : a === "ibr" ? "B" : a === "ico" ? "C" : null; if (a === "ins") insChord(ta, t.dataset.v.slice(1, -1)); else ta.setRangeText(secStr(ta.value, p, k), p, p, "end"); ta.focus() } }
     else if (a === "ppt") {
         const so = songs.find(x => x.id === S.song), ps = parts(so.text), pm = $("#pm");
         if (!S.seq.length) { pm.textContent = "Přidej aspoň jednu část."; return }
@@ -185,17 +250,17 @@ async function songAct(t) {
         pm.textContent = (await copyText(qlText(so, ps, S.seq, S.pl ?? 2))) ? "Zkopírováno. Ve FreeShow stiskni Ctrl+Alt+I (Cmd+Option+I na Macu)." : "Kopírování se nepovedlo."
     }
     else if (a === "aip") { const p = $("#aipin"); if (p && p.value) ls("pin", p.value); if (!ls("pin")) { toast("Nejdřív zadej PIN."); return } $("#aif").click() }
-    else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; S.edit = { title: d.title, author: d.author, text: d.text }; S.draft = id; await renderSongs(); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
-    else if (a === "aix") { drafts = drafts.filter(x => x.id !== id); jobs = jobs.filter(x => x.id !== id); saveDrafts(); renderSongs() }
+    else if (a === "aid") { const d = drafts.find(x => x.id === id); if (!d) return; S.edit = { title: d.title, author: d.author, text: toAbove(d.text) }; S.draft = id; await renderSongs(); showSrc(id); $("#sm").textContent = d.notes ? "AI: " + d.notes : "Zkontroluj text a akordy před uložením." }
+    else if (a === "aix") { idb.del(id); drafts = drafts.filter(x => x.id !== id); jobs = jobs.filter(x => x.id !== id); saveDrafts(); renderSongs() }
     else if (a === "air") { const j = jobs.find(x => x.id === id); if (j) { j.st = "wait"; aiPump(); renderSongs() } }
     else if (a === "new") { S.edit = { title: "", author: "", text: "" }; renderSongs() }
-    else if (a === "edit") { S.edit = { ...songs.find(x => x.id === id) }; renderSongs() }
+    else if (a === "edit") { const so = songs.find(x => x.id === id); S.edit = { ...so, text: toAbove(so.text) }; renderSongs() }
     else if (a === "cancel") { S.edit = null; S.draft = null; renderSongs() }
     else if (a === "save") {
-        const s = { ...S.edit, title: $("#st").value.trim(), author: $("#sa").value.trim(), text: expand($("#sx").value) };
+        const s = { ...S.edit, title: $("#st").value.trim(), author: $("#sa").value.trim(), text: $("#sx").value.replace(/\r/g, "").replace(/[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").replace(/^\n+|\s+$/g, "") };
         if (!s.title || !s.text.trim()) { $("#sm").textContent = "Vyplň název a text."; return }
         if (!s.id) s.id = Date.now().toString(36); if (!s.slug) s.slug = uniqueSlug(s.title, s.id); if (API) ls("pin", $("#sp").value); $("#sm").textContent = "Ukládám…";
-        try { S.msg = await store("save", s); if (S.draft) { drafts = drafts.filter(x => x.id !== S.draft); saveDrafts(); S.draft = null } S.edit = null; S.song = s.id; S.tr = 0; S.pres = false; setUrl(songs.find(x => x.id === s.id), true); renderSongs() } catch (e) { $("#sm").textContent = "Nepodařilo se uložit: " + e.message }
+        try { S.msg = await store("save", s); if (S.draft) { idb.del(S.draft); drafts = drafts.filter(x => x.id !== S.draft); saveDrafts(); S.draft = null } S.edit = null; S.song = s.id; S.tr = 0; S.pres = false; setUrl(songs.find(x => x.id === s.id), true); renderSongs() } catch (e) { $("#sm").textContent = "Nepodařilo se uložit: " + e.message }
     }
     else if (a === "del") { t.parentElement.innerHTML = (API ? `<input class="f1" id="dp" type="password" placeholder="PIN" style="max-width:180px;margin:0">` : "") + `<button class="btn ac" data-s="del2" data-id="${esc(id)}">Smazat</button><button class="btn" data-s="open" data-id="${esc(id)}">Zrušit</button>`; const d = $("#dp"); if (d) d.focus() }
     else if (a === "del2") {
@@ -701,10 +766,23 @@ function shrink(file, max = 2000) {                          // zmenší obráze
         img.src = url;
     });
 }
+// originály screenshotů ke konceptům (IndexedDB, v localStorage by se nevešly); bez podpory prohlížeče se prostě nezobrazí
+const idb = (() => {
+    let db; const open = () => db || (db = new Promise((ok, no) => { const r = indexedDB.open("zpevnik", 1); r.onupgradeneeded = () => r.result.createObjectStore("img"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error) }));
+    const tx = async (mode, f) => { const d = await open(); return new Promise((ok, no) => { const t = d.transaction("img", mode), r = f(t.objectStore("img")); t.oncomplete = () => ok(r.result); t.onerror = t.onabort = () => no(t.error) }) };
+    return { get: k => tx("readonly", s => s.get(k)).catch(() => null), set: (k, v) => tx("readwrite", s => s.put(v, k)).catch(() => { }), del: k => tx("readwrite", s => s.delete(k)).catch(() => { }) };
+})();
+async function showSrc(id) {
+    const a = await idb.get(id), el = $("#aisrc"); if (!el) return;
+    if (!a || !a.length) { const w = el.closest("details"); if (w) w.remove(); return }
+    el.innerHTML = a.map(u => `<img src="${u}" alt="Originál">`).join("");
+}
+document.addEventListener("click", e => { const im = e.target.closest(".aisrc img"); if (im) fetch(im.src).then(r => r.blob()).then(b => window.open(URL.createObjectURL(b), "_blank")).catch(() => { }) });
+document.addEventListener("input", e => { if (e.target.id === "aih") S.aih = e.target.value });
 const aiRefresh = () => { if (!S.edit && !S.song && !S.pres) renderSongs() };   // překreslí seznam s frontou
 function aiAdd(files, merge) {                               // merge = všechny obrázky patří k jedné písničce
     const groups = merge ? [files.slice(0, 4)] : files.map(f => [f]);
-    groups.forEach(g => jobs.push({ id: "ai" + Date.now().toString(36) + (jobSeq++), files: g, name: g.map(f => f.name).join(", ") || "obrázek", st: "wait" }));
+    groups.forEach(g => jobs.push({ id: "ai" + Date.now().toString(36) + (jobSeq++), files: g, name: g.map(f => f.name).join(", ") || "obrázek", hint: (S.aih || "").trim().slice(0, 300), st: "wait" }));
     aiPump(); aiRefresh();
 }
 function aiPump() {
@@ -718,11 +796,13 @@ async function aiRun(j) {
         const images = await Promise.all(j.files.map(f => shrink(f)));
         let res;
         for (let k = 0; ; k++) {                             // výpadek spojení nebo odpověď Cloudflare (ne od Workeru): zkus znovu, max. 3×
-            try { res = await (await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ act: "ai", pin: ls("pin") || "", images }) })).json(); break }
+            try { res = await (await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ act: "ai", pin: ls("pin") || "", images, hint: j.hint || "" }) })).json(); break }
             catch (e) { if (k >= 2) throw new Error("Worker neodpověděl (síť nebo limit Cloudflare)"); await new Promise(r => setTimeout(r, 2000)) }
         }
         if (!res.ok) throw new Error(res.error || "chyba serveru");
-        drafts.push({ id: j.id, title: res.song.title || "Bez názvu", author: res.song.author || "", text: expand(res.song.text), notes: (res.via && res.via !== "Gemini" ? "Přepsal záložní model (" + res.via + "), zkontroluj pozorně. " : "") + (res.notes || "") });
+        const dup = songs && songs.some(x => norm(x.title.trim()) === norm((res.song.title || "").trim()));
+        idb.set(j.id, images.map(i => "data:" + i.mime + ";base64," + i.data));
+        drafts.push({ id: j.id, title: res.song.title || "Bez názvu", author: res.song.author || "", text: expand(res.song.text), notes: (dup ? "Písnička s tímto názvem už ve zpěvníku je. " : "") + (res.via && res.via !== "Gemini" ? "Přepsal záložní model (" + res.via + "), zkontroluj pozorně. " : "") + (res.notes || "") });
         saveDrafts(); jobs = jobs.filter(x => x !== j);
         toast("AI dokončila: " + (res.song.title || j.name) + (res.via && res.via !== "Gemini" ? " (záložní model: " + res.via + ")" : ""));
     } catch (err) { j.st = "err"; j.msg = err.message; toast("AI se nepovedla: " + j.name) }
@@ -734,7 +814,7 @@ function aiBox() {                                           // blok pod tlačí
         ? `<div class="job">⚠ ${esc(j.name)} – ${esc(j.msg)} <button class="btn" data-s="air" data-id="${j.id}">Znovu</button><button class="btn" data-s="aix" data-id="${j.id}">×</button></div>`
         : `<div class="job">⏳ ${j.st === "run" ? "Čtu" : "Čeká"}: ${esc(j.name)}</div>`).join("")
         + drafts.map(d => `<div class="job">✓ <b>${esc(d.title)}</b><button class="btn ac" data-s="aid" data-id="${d.id}">Zkontrolovat a uložit</button><button class="btn" data-s="aix" data-id="${d.id}" aria-label="Zahodit">×</button></div>`).join("");
-    return `<div class="aib"><button class="btn" data-s="aip">Z obrázku (AI)</button> <label class="info"><input type="checkbox" id="aim"${S.aim ? " checked" : ""}> více obrázků = jedna písnička</label>${ls("pin") ? "" : ' <input class="f1" id="aipin" type="password" placeholder="PIN" style="max-width:140px;display:inline-block;margin:0">'}<input type="file" id="aif" accept="image/*" multiple hidden>${rows}</div>`;
+    return `<div class="aib"><button class="btn" data-s="aip">Z obrázku (AI)</button> <label class="info"><input type="checkbox" id="aim"${S.aim ? " checked" : ""}> více obrázků = jedna písnička</label>${ls("pin") ? "" : ' <input class="f1" id="aipin" type="password" placeholder="PIN" style="max-width:140px;display:inline-block;margin:0">'}<input class="f1" id="aih" maxlength="300" placeholder="Tip pro AI (nepovinné), např. text je slovensky · akordy jsou anglicky · kapodastr na 2. pražci" value="${esc(S.aih || "")}" style="margin:8px 0"><input type="file" id="aif" accept="image/*" multiple hidden>${rows}</div>`;
 }
 document.addEventListener("change", e => {
     if (e.target.id === "aim") S.aim = e.target.checked;
